@@ -325,7 +325,7 @@ const mapDispatchToProps = {
   clearSearch,
   clearFieldErrors,
   boundGetAsset: path => (dispatch, getState) => {
-    return getAsset({ state: getState(), dispatch, path });
+    return getAsset({ dispatch, getState, path });
   },
 };
 
