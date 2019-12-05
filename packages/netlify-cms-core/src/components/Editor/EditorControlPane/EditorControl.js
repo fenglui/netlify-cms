@@ -18,7 +18,7 @@ import {
   clearMediaControl,
   removeMediaControl,
 } from 'Actions/mediaLibrary';
-import { getAsset } from '../../../reducers';
+import { getAsset, selectEntry } from '../../../reducers';
 import Widget from './Widget';
 
 /**
@@ -303,11 +303,18 @@ class EditorControl extends React.Component {
   }
 }
 
-const mapStateToProps = state => {
+const mapStateToProps = (state, ownProps) => {
+  const { collections } = state;
+  const slug = ownProps.match?.params?.params[0];
+  const collection = collections.get(ownProps.match?.params?.name);
+  const entry = selectEntry(state, collection?.get('name'), slug);
+
   return {
     mediaPaths: state.mediaLibrary.get('controlMedia'),
     isFetching: state.search.get('isFetching'),
     queryHits: state.search.get('queryHits'),
+    collection,
+    entry,
   };
 };
 
@@ -324,14 +331,27 @@ const mapDispatchToProps = {
   },
   clearSearch,
   clearFieldErrors,
-  boundGetAsset: path => (dispatch, getState) => {
-    return getAsset({ dispatch, getState, path });
+  boundGetAsset: (collection, entryPath) => path => (dispatch, getState) => {
+    return getAsset({ dispatch, getState, collection, entryPath, path });
   },
+};
+
+const mergeProps = (stateProps, dispatchProps, ownProps) => {
+  return {
+    ...stateProps,
+    ...dispatchProps,
+    ...ownProps,
+    boundGetAsset: dispatchProps.boundGetAsset(
+      stateProps.collection,
+      stateProps.entry?.get('path'),
+    ),
+  };
 };
 
 const ConnectedEditorControl = connect(
   mapStateToProps,
   mapDispatchToProps,
+  mergeProps,
 )(translate()(EditorControl));
 
 export default ConnectedEditorControl;
