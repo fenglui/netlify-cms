@@ -8,14 +8,14 @@ import {
   loadEntries as actionLoadEntries,
   traverseCollectionCursor as actionTraverseCollectionCursor,
 } from 'Actions/entries';
-import { selectEntries } from 'Reducers';
+import { selectEntries, selectEntriesLoaded, selectIsFetching } from '../../../reducers/entries';
 import { selectCollectionEntriesCursor } from 'Reducers/cursors';
 import Entries from './Entries';
 
-class EntriesCollection extends React.Component {
+export class EntriesCollection extends React.Component {
   static propTypes = {
     collection: ImmutablePropTypes.map.isRequired,
-    publicFolder: PropTypes.string.isRequired,
+    page: PropTypes.number,
     entries: ImmutablePropTypes.list,
     isFetching: PropTypes.bool.isRequired,
     viewStyle: PropTypes.string,
@@ -45,37 +45,60 @@ class EntriesCollection extends React.Component {
   };
 
   render() {
-    const { collection, entries, publicFolder, isFetching, viewStyle, cursor } = this.props;
+    const { collection, entries, isFetching, viewStyle, cursor, page } = this.props;
 
     return (
       <Entries
         collections={collection}
         entries={entries}
-        publicFolder={publicFolder}
         isFetching={isFetching}
         collectionName={collection.get('label')}
         viewStyle={viewStyle}
         cursor={cursor}
         handleCursorActions={partial(this.handleCursorActions, cursor)}
+        page={page}
       />
     );
   }
 }
 
+export const filterNestedEntries = (path, collectionFolder, entries) => {
+  const filtered = entries.filter(e => {
+    const entryPath = e.get('path').substring(collectionFolder.length + 1);
+    if (!entryPath.startsWith(path)) {
+      return false;
+    }
+
+    // only show immediate children
+    if (path) {
+      // non root path
+      const trimmed = entryPath.substring(path.length + 1);
+      return trimmed.split('/').length === 2;
+    } else {
+      // root path
+      return entryPath.split('/').length <= 2;
+    }
+  });
+  return filtered;
+};
+
 function mapStateToProps(state, ownProps) {
-  const { collection, viewStyle } = ownProps;
-  const { config } = state;
-  const publicFolder = config.get('public_folder');
+  const { collection, viewStyle, filterTerm } = ownProps;
   const page = state.entries.getIn(['pages', collection.get('name'), 'page']);
 
-  const entries = selectEntries(state, collection.get('name'));
-  const entriesLoaded = !!state.entries.getIn(['pages', collection.get('name')]);
-  const isFetching = state.entries.getIn(['pages', collection.get('name'), 'isFetching'], false);
+  let entries = selectEntries(state.entries, collection);
+
+  if (collection.has('nested')) {
+    const collectionFolder = collection.get('folder');
+    entries = filterNestedEntries(filterTerm || '', collectionFolder, entries);
+  }
+  const entriesLoaded = selectEntriesLoaded(state.entries, collection.get('name'));
+  const isFetching = selectIsFetching(state.entries, collection.get('name'));
 
   const rawCursor = selectCollectionEntriesCursor(state.cursors, collection.get('name'));
   const cursor = Cursor.create(rawCursor).clearData();
 
-  return { publicFolder, collection, page, entries, entriesLoaded, isFetching, viewStyle, cursor };
+  return { collection, page, entries, entriesLoaded, isFetching, viewStyle, cursor };
 }
 
 const mapDispatchToProps = {

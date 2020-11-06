@@ -1,11 +1,10 @@
-/** @jsx jsx */
 // eslint-disable-next-line no-unused-vars
 import React from 'react';
 import PropTypes from 'prop-types';
-import { jsx, css, Global } from '@emotion/core';
+import { css, Global } from '@emotion/core';
 import { translate } from 'react-polyglot';
 import reduxNotificationsStyles from 'redux-notifications/lib/styles.css';
-import { shadows, colors, lengths } from 'netlify-cms-ui-default';
+import { shadows, colors, lengths, zIndex } from 'netlify-cms-ui-default';
 
 const ReduxNotificationsGlobalStyles = () => (
   <Global
@@ -13,7 +12,7 @@ const ReduxNotificationsGlobalStyles = () => (
       ${reduxNotificationsStyles};
 
       .notif__container {
-        z-index: 10000;
+        z-index: ${zIndex.zIndex10000};
         white-space: pre-wrap;
       }
     `}

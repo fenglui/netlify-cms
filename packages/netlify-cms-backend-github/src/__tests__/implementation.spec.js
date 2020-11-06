@@ -1,23 +1,15 @@
 import GitHubImplementation from '../implementation';
+import { Cursor, CURSOR_COMPATIBILITY_SYMBOL } from 'netlify-cms-lib-util';
 
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
 describe('github backend implementation', () => {
   const config = {
-    getIn: jest.fn().mockImplementation(array => {
-      if (array[0] === 'backend' && array[1] === 'repo') {
-        return 'owner/repo';
-      }
-      if (array[0] === 'backend' && array[1] === 'open_authoring') {
-        return false;
-      }
-      if (array[0] === 'backend' && array[1] === 'branch') {
-        return 'master';
-      }
-      if (array[0] === 'backend' && array[1] === 'api_root') {
-        return 'https://api.github.com';
-      }
-    }),
+    backend: {
+      repo: 'owner/repo',
+      open_authoring: false,
+      api_root: 'https://api.github.com',
+    },
   };
 
   const createObjectURL = jest.fn();
@@ -51,6 +43,7 @@ describe('github backend implementation', () => {
         headers: {
           Authorization: 'token token',
         },
+        signal: expect.any(AbortSignal),
       });
     });
 
@@ -92,55 +85,26 @@ describe('github backend implementation', () => {
       });
     });
 
-    it('should persist media file when not draft', async () => {
+    it('should persist media file', async () => {
       const gitHubImplementation = new GitHubImplementation(config);
       gitHubImplementation.api = mockAPI;
 
       const mediaFile = {
-        value: 'image.png',
-        fileObj: { size: 100 },
+        fileObj: { size: 100, name: 'image.png' },
         path: '/media/image.png',
       };
 
       expect.assertions(5);
-      await expect(gitHubImplementation.persistMedia(mediaFile)).resolves.toEqual({
+      await expect(gitHubImplementation.persistMedia(mediaFile, {})).resolves.toEqual({
         id: 0,
         name: 'image.png',
         size: 100,
         displayURL: 'displayURL',
         path: 'media/image.png',
-        draft: undefined,
       });
 
       expect(persistFiles).toHaveBeenCalledTimes(1);
-      expect(persistFiles).toHaveBeenCalledWith(null, [mediaFile], {});
-      expect(createObjectURL).toHaveBeenCalledTimes(1);
-      expect(createObjectURL).toHaveBeenCalledWith(mediaFile.fileObj);
-    });
-
-    it('should not persist media file when draft', async () => {
-      const gitHubImplementation = new GitHubImplementation(config);
-      gitHubImplementation.api = mockAPI;
-
-      createObjectURL.mockReturnValue('displayURL');
-
-      const mediaFile = {
-        value: 'image.png',
-        fileObj: { size: 100 },
-        path: '/media/image.png',
-      };
-
-      expect.assertions(4);
-      await expect(gitHubImplementation.persistMedia(mediaFile, { draft: true })).resolves.toEqual({
-        id: undefined,
-        name: 'image.png',
-        size: 100,
-        displayURL: 'displayURL',
-        path: 'media/image.png',
-        draft: true,
-      });
-
-      expect(persistFiles).toHaveBeenCalledTimes(0);
+      expect(persistFiles).toHaveBeenCalledWith([], [mediaFile], {});
       expect(createObjectURL).toHaveBeenCalledTimes(1);
       expect(createObjectURL).toHaveBeenCalledWith(mediaFile.fileObj);
     });
@@ -168,84 +132,229 @@ describe('github backend implementation', () => {
     });
   });
 
-  describe('getMediaFiles', () => {
-    const getMediaAsBlob = jest.fn();
-    const mockAPI = {
-      getMediaAsBlob,
-    };
-
-    it('should return media files from meta data', async () => {
-      const gitHubImplementation = new GitHubImplementation(config);
-      gitHubImplementation.api = mockAPI;
-
-      const blob = new Blob(['']);
-      getMediaAsBlob.mockResolvedValue(blob);
-
-      const file = new File([blob], name);
-
-      const data = {
-        metaData: {
-          objects: {
-            files: [{ path: 'static/media/image.png', sha: 'image.png' }],
-          },
-        },
-      };
-
-      await expect(gitHubImplementation.getMediaFiles(data)).resolves.toEqual([
-        {
-          id: 'image.png',
-          sha: 'image.png',
-          displayURL: 'displayURL',
-          path: 'static/media/image.png',
-          name: 'image.png',
-          size: file.size,
-          file,
-        },
-      ]);
-    });
-  });
-
   describe('unpublishedEntry', () => {
     const generateContentKey = jest.fn();
-    const readUnpublishedBranchFile = jest.fn();
+    const retrieveUnpublishedEntryData = jest.fn();
 
     const mockAPI = {
       generateContentKey,
-      readUnpublishedBranchFile,
+      retrieveUnpublishedEntryData,
     };
 
-    it('should return unpublished entry', async () => {
+    it('should return unpublished entry data', async () => {
       const gitHubImplementation = new GitHubImplementation(config);
       gitHubImplementation.api = mockAPI;
-      gitHubImplementation.getMediaFiles = jest.fn().mockResolvedValue([{ path: 'image.png' }]);
+      gitHubImplementation.loadEntryMediaFiles = jest
+        .fn()
+        .mockResolvedValue([{ path: 'image.png', id: 'sha' }]);
 
       generateContentKey.mockReturnValue('contentKey');
 
       const data = {
-        fileData: 'fileData',
-        isModification: true,
-        metaData: { objects: { entry: { path: 'entry-path' } } },
-      };
-      readUnpublishedBranchFile.mockResolvedValue(data);
-
-      const collection = { get: jest.fn().mockReturnValue('posts') };
-      await expect(gitHubImplementation.unpublishedEntry(collection, 'slug')).resolves.toEqual({
+        collection: 'collection',
         slug: 'slug',
-        file: { path: 'entry-path' },
-        data: 'fileData',
-        metaData: { objects: { entry: { path: 'entry-path' } } },
-        mediaFiles: [{ path: 'image.png' }],
-        isModification: true,
-      });
+        status: 'draft',
+        diffs: [],
+        updatedAt: 'updatedAt',
+      };
+      retrieveUnpublishedEntryData.mockResolvedValue(data);
+
+      const collection = 'posts';
+      const slug = 'slug';
+      await expect(gitHubImplementation.unpublishedEntry({ collection, slug })).resolves.toEqual(
+        data,
+      );
 
       expect(generateContentKey).toHaveBeenCalledTimes(1);
       expect(generateContentKey).toHaveBeenCalledWith('posts', 'slug');
 
-      expect(readUnpublishedBranchFile).toHaveBeenCalledTimes(1);
-      expect(readUnpublishedBranchFile).toHaveBeenCalledWith('contentKey');
+      expect(retrieveUnpublishedEntryData).toHaveBeenCalledTimes(1);
+      expect(retrieveUnpublishedEntryData).toHaveBeenCalledWith('contentKey');
+    });
+  });
 
-      expect(gitHubImplementation.getMediaFiles).toHaveBeenCalledTimes(1);
-      expect(gitHubImplementation.getMediaFiles).toHaveBeenCalledWith(data);
+  describe('entriesByFolder', () => {
+    const listFiles = jest.fn();
+    const readFile = jest.fn();
+    const readFileMetadata = jest.fn(() => Promise.resolve({ author: '', updatedOn: '' }));
+
+    const mockAPI = {
+      listFiles,
+      readFile,
+      readFileMetadata,
+      originRepoURL: 'originRepoURL',
+    };
+
+    it('should return entries and cursor', async () => {
+      const gitHubImplementation = new GitHubImplementation(config);
+      gitHubImplementation.api = mockAPI;
+
+      const files = [];
+      const count = 1501;
+      for (let i = 0; i < count; i++) {
+        const id = `${i}`.padStart(`${count}`.length, '0');
+        files.push({
+          id,
+          path: `posts/post-${id}.md`,
+        });
+      }
+
+      listFiles.mockResolvedValue(files);
+      readFile.mockImplementation((path, id) => Promise.resolve(`${id}`));
+
+      const expectedEntries = files
+        .slice(0, 20)
+        .map(({ id, path }) => ({ data: id, file: { path, id, author: '', updatedOn: '' } }));
+
+      const expectedCursor = Cursor.create({
+        actions: ['next', 'last'],
+        meta: { page: 1, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      expectedEntries[CURSOR_COMPATIBILITY_SYMBOL] = expectedCursor;
+
+      const result = await gitHubImplementation.entriesByFolder('posts', 'md', 1);
+
+      expect(result).toEqual(expectedEntries);
+      expect(listFiles).toHaveBeenCalledTimes(1);
+      expect(listFiles).toHaveBeenCalledWith('posts', { depth: 1, repoURL: 'originRepoURL' });
+      expect(readFile).toHaveBeenCalledTimes(20);
+    });
+  });
+
+  describe('traverseCursor', () => {
+    const listFiles = jest.fn();
+    const readFile = jest.fn((path, id) => Promise.resolve(`${id}`));
+    const readFileMetadata = jest.fn(() => Promise.resolve({}));
+
+    const mockAPI = {
+      listFiles,
+      readFile,
+      originRepoURL: 'originRepoURL',
+      readFileMetadata,
+    };
+
+    const files = [];
+    const count = 1501;
+    for (let i = 0; i < count; i++) {
+      const id = `${i}`.padStart(`${count}`.length, '0');
+      files.push({
+        id,
+        path: `posts/post-${id}.md`,
+      });
+    }
+
+    it('should handle next action', async () => {
+      const gitHubImplementation = new GitHubImplementation(config);
+      gitHubImplementation.api = mockAPI;
+
+      const cursor = Cursor.create({
+        actions: ['next', 'last'],
+        meta: { page: 1, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const expectedEntries = files
+        .slice(20, 40)
+        .map(({ id, path }) => ({ data: id, file: { path, id } }));
+
+      const expectedCursor = Cursor.create({
+        actions: ['prev', 'first', 'next', 'last'],
+        meta: { page: 2, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const result = await gitHubImplementation.traverseCursor(cursor, 'next');
+
+      expect(result).toEqual({
+        entries: expectedEntries,
+        cursor: expectedCursor,
+      });
+    });
+
+    it('should handle prev action', async () => {
+      const gitHubImplementation = new GitHubImplementation(config);
+      gitHubImplementation.api = mockAPI;
+
+      const cursor = Cursor.create({
+        actions: ['prev', 'first', 'next', 'last'],
+        meta: { page: 2, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const expectedEntries = files
+        .slice(0, 20)
+        .map(({ id, path }) => ({ data: id, file: { path, id } }));
+
+      const expectedCursor = Cursor.create({
+        actions: ['next', 'last'],
+        meta: { page: 1, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const result = await gitHubImplementation.traverseCursor(cursor, 'prev');
+
+      expect(result).toEqual({
+        entries: expectedEntries,
+        cursor: expectedCursor,
+      });
+    });
+
+    it('should handle last action', async () => {
+      const gitHubImplementation = new GitHubImplementation(config);
+      gitHubImplementation.api = mockAPI;
+
+      const cursor = Cursor.create({
+        actions: ['next', 'last'],
+        meta: { page: 1, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const expectedEntries = files
+        .slice(1500)
+        .map(({ id, path }) => ({ data: id, file: { path, id } }));
+
+      const expectedCursor = Cursor.create({
+        actions: ['prev', 'first'],
+        meta: { page: 76, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const result = await gitHubImplementation.traverseCursor(cursor, 'last');
+
+      expect(result).toEqual({
+        entries: expectedEntries,
+        cursor: expectedCursor,
+      });
+    });
+
+    it('should handle first action', async () => {
+      const gitHubImplementation = new GitHubImplementation(config);
+      gitHubImplementation.api = mockAPI;
+
+      const cursor = Cursor.create({
+        actions: ['prev', 'first'],
+        meta: { page: 76, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const expectedEntries = files
+        .slice(0, 20)
+        .map(({ id, path }) => ({ data: id, file: { path, id } }));
+
+      const expectedCursor = Cursor.create({
+        actions: ['next', 'last'],
+        meta: { page: 1, count, pageSize: 20, pageCount: 76 },
+        data: { files },
+      });
+
+      const result = await gitHubImplementation.traverseCursor(cursor, 'first');
+
+      expect(result).toEqual({
+        entries: expectedEntries,
+        cursor: expectedCursor,
+      });
     });
   });
 });

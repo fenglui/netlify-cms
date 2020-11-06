@@ -3,6 +3,357 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.11.6](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.11.5...netlify-cms-backend-github@2.11.6) (2020-09-20)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+## [2.11.5](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.11.4...netlify-cms-backend-github@2.11.5) (2020-09-15)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+## 2.11.4 (2020-09-08)
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([828bb16](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/828bb16415b8c22a34caa19c50c38b24ffe9ceae))
+
+
+
+
+
+## 2.11.3 (2020-08-20)
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([8262487](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/82624879ccbcb16610090041db28f00714d924c8))
+
+
+
+
+
+## 2.11.2 (2020-07-27)
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([118d50a](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/118d50a7a70295f25073e564b5161aa2b9883056))
+
+
+
+
+
+## [2.11.1](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.11.0...netlify-cms-backend-github@2.11.1) (2020-07-14)
+
+
+### Bug Fixes
+
+* **backend-github:** use workflow branch when listing files to move ([#4019](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/4019)) ([8720a42](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/8720a4233db16d91d6b86ee8653d05f8953cb430))
+
+
+
+
+
+# [2.11.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.6...netlify-cms-backend-github@2.11.0) (2020-06-18)
+
+
+### Bug Fixes
+
+* handle token expiry ([#3847](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3847)) ([285c940](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/285c940562548d7bc88de244123ba87ff66fba65))
+
+
+### Features
+
+* add backend status down indicator ([#3889](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3889)) ([a50edc7](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/a50edc70553ad6afa1acee6a51996ad226443f8c))
+* **backend-gitgateway:** improve deploy preview visibility ([#3882](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3882)) ([afc9bf4](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/afc9bf4f3fe14ccb60851fc24e68922a6e4a85a9))
+
+
+
+
+
+## [2.10.6](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.5...netlify-cms-backend-github@2.10.6) (2020-05-19)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+## [2.10.5](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.4...netlify-cms-backend-github@2.10.5) (2020-04-21)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+## [2.10.4](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.3...netlify-cms-backend-github@2.10.4) (2020-04-07)
+
+
+### Bug Fixes
+
+* **backend-github:** add fallback for diff errors/warnings ([#3558](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3558)) ([1705c79](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/1705c79a9297d844d5421d685a7785e1e210e39e))
+
+
+
+
+
+## [2.10.3](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.2...netlify-cms-backend-github@2.10.3) (2020-04-01)
+
+
+### Bug Fixes
+
+* **open-authoring:** properly delete open authoring branches ([#3512](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3512)) ([cc89aa5](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/cc89aa5c430a6bee51483cda91d0f92e7437f29e))
+
+
+
+
+
+## [2.10.2](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.1...netlify-cms-backend-github@2.10.2) (2020-04-01)
+
+
+### Bug Fixes
+
+* **open-authoring:** prevent workflow view from breaking on entry error ([#3508](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3508)) ([cbb3927](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/cbb39271012fc3beecfdf180e573e343ee48fe26))
+
+
+
+
+
+## [2.10.1](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.10.0...netlify-cms-backend-github@2.10.1) (2020-03-20)
+
+
+### Bug Fixes
+
+* missing workflow timestamp ([#3445](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3445)) ([9616cdb](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/9616cdb8bb0a564771e5755bcd3718a07f2e2072))
+
+
+
+
+
+# [2.10.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.9.3...netlify-cms-backend-github@2.10.0) (2020-03-12)
+
+
+### Bug Fixes
+
+* **backend-github:** don't create new commits on empty diff when rebasing ([#3411](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3411)) ([70de9f6](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/70de9f6b4b89dd8e23205929033745572562e8fc))
+* update repo owner from GitHub API to match casing ([#3410](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3410)) ([c2e7a24](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/c2e7a24dc20dfea5b1289c5705095d2cf8b04c54))
+
+
+### Features
+
+* **backend-github:** add pagination ([#3379](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3379)) ([39f1307](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/39f1307e3a36447da8c9b3ca79b1d7db52ea1a19))
+
+
+
+
+
+## [2.9.3](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.9.2...netlify-cms-backend-github@2.9.3) (2020-03-03)
+
+
+### Bug Fixes
+
+* **locale:** Remove hard coded string literals ([#3333](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3333)) ([7c45a3c](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/7c45a3cda983be427864a56e58791565eb9232e2))
+* **open-authoring:** use origin repo when calling compare API ([#3363](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3363)) ([e40b81a](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/e40b81a5647d45487d6ddf17245beddd354e0f39))
+
+
+
+
+
+## [2.9.2](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.9.1...netlify-cms-backend-github@2.9.2) (2020-02-27)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+## [2.9.1](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.9.0...netlify-cms-backend-github@2.9.1) (2020-02-25)
+
+
+### Bug Fixes
+
+* **backend-github:** fail workflow migrations gracefully ([#3325](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3325)) ([83e0383](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/83e0383b690fb452ea40cb165a56f65a695dc83c))
+
+
+
+
+
+# [2.9.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.8.1...netlify-cms-backend-github@2.9.0) (2020-02-25)
+
+
+### Bug Fixes
+
+* **backend-github:** improve workflow migration edge cases/messaging ([#3319](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3319)) ([684b79e](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/684b79e43bebb63ce1e844eae5c8c0e76087687b))
+
+
+### Features
+
+* **core:** align GitHub metadata handling with other backends ([#3316](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3316)) ([7e0a8ad](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/7e0a8ad532012576dc5e40bd4e9d54522e307123)), closes [#3292](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3292)
+
+
+
+
+
+## [2.8.1](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.8.0...netlify-cms-backend-github@2.8.1) (2020-02-22)
+
+
+### Reverts
+
+* Revert "feat(core): Align GitHub metadata handling with other backends (#3292)" ([5bdd3df](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/5bdd3df9ccbb5149c22d79987ebdcd6cab4b261f)), closes [#3292](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3292)
+
+
+
+
+
+# [2.8.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.7.1...netlify-cms-backend-github@2.8.0) (2020-02-22)
+
+
+### Features
+
+* **core:** Align GitHub metadata handling with other backends ([#3292](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3292)) ([8193b5a](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/8193b5ace89d6f14a6c756235a50b186a763b6b1))
+
+
+
+
+
+## [2.7.1](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.7.0...netlify-cms-backend-github@2.7.1) (2020-02-17)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+# [2.7.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.6...netlify-cms-backend-github@2.7.0) (2020-02-10)
+
+
+### Features
+
+* field based media/public folders ([#3208](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3208)) ([97bc0c8](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/97bc0c8dc489e736f89d748ba832d78400fe4332))
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([a015d1d](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/a015d1d92a4b1c0130c44fcef1c9ecdb157a0f07))
+
+
+
+
+
+## [2.6.6](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.5...netlify-cms-backend-github@2.6.6) (2020-02-06)
+
+
+### Bug Fixes
+
+* **locale:** remove hard coded strings ([#3193](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3193)) ([fc91bf8](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/fc91bf8781e65ce1dc946363dbb10419a145c66b))
+
+
+
+
+
+## [2.6.5](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.4...netlify-cms-backend-github@2.6.5) (2020-01-24)
+
+
+### Bug Fixes
+
+* **backend-git-gateway:** re-write GitHub pagination links ([#3135](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3135)) ([834f6b9](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/834f6b9e457f3738ce0f240ddd4cc160aff9e2f5))
+
+
+
+
+
+## [2.6.4](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.3...netlify-cms-backend-github@2.6.4) (2020-01-16)
+
+
+### Bug Fixes
+
+* **backend-github-graphql:** handle trailing paths in collection folder ([#3099](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3099)) ([bc80804](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/bc808040661d345e65d49d64693cd6da3b6816fb))
+
+
+
+
+
+## [2.6.3](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.2...netlify-cms-backend-github@2.6.3) (2020-01-14)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+## [2.6.2](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.1...netlify-cms-backend-github@2.6.2) (2020-01-14)
+
+
+### Bug Fixes
+
+* **backend-github-graphql:** return empty array on non existent folder ([#3079](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3079)) ([69b130a](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/69b130a3f239590f828f0e4f6f6c0a872b17548b))
+
+
+
+
+
+## [2.6.1](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.0...netlify-cms-backend-github@2.6.1) (2020-01-09)
+
+
+### Bug Fixes
+
+* trim '/' from folder ([#3052](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/3052)) ([4b6c8de](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/4b6c8de6b2e3de28f0989b9a012cb302d4de4358))
+
+
+
+
+
+# [2.6.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.6.0-beta.0...netlify-cms-backend-github@2.6.0) (2020-01-07)
+
+
+### Bug Fixes
+
+* rebase open authoring branches ([#2975](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/2975)) ([8c175f6](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/8c175f6132fa18a13763cc563f7d3201c1e3580e))
+
+
+
+
+
+# [2.6.0-beta.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.5.0...netlify-cms-backend-github@2.6.0-beta.0) (2019-12-18)
+
+
+### Features
+
+* bundle assets with content ([#2958](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/issues/2958)) ([2b41d8a](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/2b41d8a838a9c8a6b21cde2ddd16b9288334e298))
+
+
+
+
+
+# [2.5.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.5.0-beta.8...netlify-cms-backend-github@2.5.0) (2019-12-18)
+
+**Note:** Version bump only for package netlify-cms-backend-github
+
+
+
+
+
+# [2.5.0-beta.8](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.5.0-beta.7...netlify-cms-backend-github@2.5.0-beta.8) (2019-12-16)
+
+
+### Bug Fixes
+
+* don't fail on deleting non existent branch ([1e77d4b](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/commit/1e77d4b7688de795ab1b01c6ce2483a0383bbfb6))
+
+
+
+
+
 # [2.5.0-beta.7](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-backend-github/compare/netlify-cms-backend-github@2.5.0-beta.6...netlify-cms-backend-github@2.5.0-beta.7) (2019-12-02)
 
 

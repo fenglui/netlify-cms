@@ -1,7 +1,8 @@
 ---
 title: Architecture
 position: 90
-group: contributing
+group: Contributing
+weight: 200
 ---
 
 Netlify CMS is a React application, using Redux for state management with immutable data structures (immutable.js).
@@ -34,7 +35,7 @@ Selectors are functions defined within reducers used to compute derived data fro
 
 **selectEntries:** Selects all entries for a given collection.
 
-**getAsset:** Selects a single AssetProxy object for the given URI.
+**getAsset:** Selects a single AssetProxy object for the given path.
 
 ## Value Objects
 **AssetProxy:** AssetProxy is a Value Object that holds information regarding an asset file (for example, an image), whether it's persisted online or held locally in cache.

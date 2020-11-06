@@ -10,7 +10,7 @@ const truthy = () => ({ error: false });
 const isEmpty = value =>
   value === null ||
   value === undefined ||
-  (value.hasOwnProperty('length') && value.length === 0) ||
+  (Object.prototype.hasOwnProperty.call(value, 'length') && value.length === 0) ||
   (value.constructor === Object && Object.keys(value).length === 0) ||
   (List.isList(value) && value.size === 0);
 
@@ -44,6 +44,7 @@ export default class Widget extends Component {
     onRemoveInsertedMedia: PropTypes.func.isRequired,
     getAsset: PropTypes.func.isRequired,
     resolveWidget: PropTypes.func.isRequired,
+    widget: PropTypes.object.isRequired,
     getEditorComponents: PropTypes.func.isRequired,
     isFetching: PropTypes.bool,
     controlRef: PropTypes.func,
@@ -51,11 +52,17 @@ export default class Widget extends Component {
     clearSearch: PropTypes.func.isRequired,
     clearFieldErrors: PropTypes.func.isRequired,
     queryHits: PropTypes.oneOfType([PropTypes.array, PropTypes.object]),
-    editorControl: PropTypes.func.isRequired,
+    editorControl: PropTypes.elementType.isRequired,
     uniqueFieldId: PropTypes.string.isRequired,
     loadEntry: PropTypes.func.isRequired,
     t: PropTypes.func.isRequired,
     onValidateObject: PropTypes.func,
+    isEditorComponent: PropTypes.bool,
+    isNewEditorComponent: PropTypes.bool,
+    entry: ImmutablePropTypes.map.isRequired,
+    isDisabled: PropTypes.bool,
+    isFieldDuplicate: PropTypes.func,
+    isFieldHidden: PropTypes.func,
   };
 
   shouldComponentUpdate(nextProps) {
@@ -93,12 +100,23 @@ export default class Widget extends Component {
     this.wrappedControlShouldComponentUpdate = scu && scu.bind(this.innerWrappedControl);
   };
 
+  getValidateValue = () => {
+    let value = this.innerWrappedControl?.getValidateValue?.() || this.props.value;
+    // Convert list input widget value to string for validation test
+    List.isList(value) && (value = value.join(','));
+    return value;
+  };
+
   validate = (skipWrapped = false) => {
-    const { field, value } = this.props;
+    const value = this.getValidateValue();
+    const field = this.props.field;
     const errors = [];
     const validations = [this.validatePresence, this.validatePattern];
+    if (field.get('meta')) {
+      validations.push(this.props.validateMetaField);
+    }
     validations.forEach(func => {
-      const response = func(field, value);
+      const response = func(field, value, this.props.t);
       if (response.error) errors.push(response.error);
     });
     if (skipWrapped) {
@@ -107,15 +125,17 @@ export default class Widget extends Component {
       const wrappedError = this.validateWrappedControl(field);
       if (wrappedError.error) errors.push(wrappedError.error);
     }
+
     this.props.onValidate(errors);
   };
 
   validatePresence = (field, value) => {
-    const t = this.props.t;
+    const { t, parentIds } = this.props;
     const isRequired = field.get('required', true);
     if (isRequired && isEmpty(value)) {
       const error = {
         type: ValidationErrorTypes.PRESENCE,
+        parentIds,
         message: t('editor.editorControlPane.widget.required', {
           fieldLabel: field.get('label', field.get('name')),
         }),
@@ -127,19 +147,17 @@ export default class Widget extends Component {
   };
 
   validatePattern = (field, value) => {
-    const t = this.props.t;
+    const { t, parentIds } = this.props;
     const pattern = field.get('pattern', false);
 
     if (isEmpty(value)) {
       return { error: false };
     }
 
-    // Convert list input widget value to string for pattern test
-    List.isList(value) && (value = value.join(','));
-
     if (pattern && !RegExp(pattern.first()).test(value)) {
       const error = {
         type: ValidationErrorTypes.PATTERN,
+        parentIds,
         message: t('editor.editorControlPane.widget.regexPattern', {
           fieldLabel: field.get('label', field.get('name')),
           pattern: pattern.last(),
@@ -153,7 +171,7 @@ export default class Widget extends Component {
   };
 
   validateWrappedControl = field => {
-    const t = this.props.t;
+    const { t, parentIds } = this.props;
     if (typeof this.wrappedControlValid !== 'function') {
       throw new Error(oneLine`
         this.wrappedControlValid is not a function. Are you sure widget
@@ -165,7 +183,7 @@ export default class Widget extends Component {
     if (typeof response === 'boolean') {
       const isValid = response;
       return { error: !isValid };
-    } else if (response.hasOwnProperty('error')) {
+    } else if (Object.prototype.hasOwnProperty.call(response, 'error')) {
       return response;
     } else if (response instanceof Promise) {
       response.then(
@@ -184,6 +202,7 @@ export default class Widget extends Component {
 
       const error = {
         type: ValidationErrorTypes.CUSTOM,
+        parentIds,
         message: t('editor.editorControlPane.widget.processing', {
           fieldLabel: field.get('label', field.get('name')),
         }),
@@ -204,17 +223,27 @@ export default class Widget extends Component {
   /**
    * Change handler for fields that are nested within another field.
    */
-  onChangeObject = (fieldName, newValue, newMetadata) => {
-    const newObjectValue = this.getObjectValue().set(fieldName, newValue);
+  onChangeObject = (field, newValue, newMetadata) => {
+    const newObjectValue = this.getObjectValue().set(field.get('name'), newValue);
     return this.props.onChange(
       newObjectValue,
       newMetadata && { [this.props.field.get('name')]: newMetadata },
     );
   };
 
+  setInactiveStyle = () => {
+    this.props.setInactiveStyle();
+    if (this.props.field.has('pattern') && !isEmpty(this.getValidateValue())) {
+      this.validate();
+    }
+  };
+
   render() {
     const {
       controlComponent,
+      entry,
+      collection,
+      config,
       field,
       value,
       mediaPaths,
@@ -233,11 +262,11 @@ export default class Widget extends Component {
       classNameLabel,
       classNameLabelActive,
       setActiveStyle,
-      setInactiveStyle,
       hasActiveStyle,
       editorControl,
       uniqueFieldId,
       resolveWidget,
+      widget,
       getEditorComponents,
       query,
       queryHits,
@@ -247,9 +276,19 @@ export default class Widget extends Component {
       loadEntry,
       fieldsErrors,
       controlRef,
+      isEditorComponent,
+      isNewEditorComponent,
+      parentIds,
       t,
+      isDisabled,
+      isFieldDuplicate,
+      isFieldHidden,
     } = this.props;
+
     return React.createElement(controlComponent, {
+      entry,
+      collection,
+      config,
       field,
       value,
       mediaPaths,
@@ -265,16 +304,18 @@ export default class Widget extends Component {
       getAsset,
       forID: uniqueFieldId,
       ref: this.processInnerControlRef,
+      validate: this.validate,
       classNameWrapper,
       classNameWidget,
       classNameWidgetActive,
       classNameLabel,
       classNameLabelActive,
       setActiveStyle,
-      setInactiveStyle,
+      setInactiveStyle: () => this.setInactiveStyle(),
       hasActiveStyle,
       editorControl,
       resolveWidget,
+      widget,
       getEditorComponents,
       query,
       queryHits,
@@ -282,9 +323,15 @@ export default class Widget extends Component {
       clearFieldErrors,
       isFetching,
       loadEntry,
+      isEditorComponent,
+      isNewEditorComponent,
       fieldsErrors,
       controlRef,
+      parentIds,
       t,
+      isDisabled,
+      isFieldDuplicate,
+      isFieldHidden,
     });
   }
 }

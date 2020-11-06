@@ -1,23 +1,99 @@
 import AJV from 'ajv';
+import {
+  select,
+  uniqueItemProperties,
+  instanceof as instanceOf,
+  prohibited,
+} from 'ajv-keywords/keywords';
 import ajvErrors from 'ajv-errors';
 import { formatExtensions, frontmatterFormats, extensionFormatters } from 'Formats/formats';
+import { getWidgets } from 'Lib/registry';
+import { I18N_STRUCTURE, I18N_FIELD } from '../lib/i18n';
+
+const localeType = { type: 'string', minLength: 2, maxLength: 10, pattern: '^[a-zA-Z-_]+$' };
+
+const i18n = {
+  type: 'object',
+  properties: {
+    structure: { type: 'string', enum: Object.values(I18N_STRUCTURE) },
+    locales: {
+      type: 'array',
+      minItems: 2,
+      items: localeType,
+      uniqueItems: true,
+    },
+    default_locale: localeType,
+  },
+};
+
+const i18nRoot = {
+  ...i18n,
+  required: ['structure', 'locales'],
+};
+
+const i18nCollection = {
+  oneOf: [{ type: 'boolean' }, i18n],
+};
+
+const i18nField = {
+  oneOf: [{ type: 'boolean' }, { type: 'string', enum: Object.values(I18N_FIELD) }],
+};
 
 /**
  * Config for fields in both file and folder collections.
  */
-const fieldsConfig = {
+const fieldsConfig = () => ({
+  $id: 'fields',
   type: 'array',
   minItems: 1,
   items: {
     // ------- Each field: -------
+    $id: 'field',
     type: 'object',
     properties: {
       name: { type: 'string' },
       label: { type: 'string' },
       widget: { type: 'string' },
       required: { type: 'boolean' },
+      i18n: i18nField,
+      hint: { type: 'string' },
+      pattern: {
+        type: 'array',
+        minItems: 2,
+        items: [{ oneOf: [{ type: 'string' }, { instanceof: 'RegExp' }] }, { type: 'string' }],
+      },
+      field: { $ref: 'field' },
+      fields: { $ref: 'fields' },
+      types: { $ref: 'fields' },
+    },
+    select: { $data: '0/widget' },
+    selectCases: {
+      ...getWidgetSchemas(),
     },
     required: ['name'],
+  },
+  uniqueItemProperties: ['name'],
+});
+
+const viewFilters = {
+  type: 'array',
+  minItems: 1,
+  items: {
+    type: 'object',
+    properties: {
+      label: { type: 'string' },
+      field: { type: 'string' },
+      pattern: {
+        oneOf: [
+          { type: 'boolean' },
+          {
+            type: 'string',
+          },
+        ],
+      },
+    },
+    additionalProperties: false,
+    required: ['label', 'field', 'pattern'],
   },
 };
 
@@ -38,11 +114,29 @@ const getConfigSchema = () => ({
           examples: ['repo', 'public_repo'],
           enum: ['repo', 'public_repo'],
         },
+        cms_label_prefix: { type: 'string', minLength: 1 },
         open_authoring: { type: 'boolean', examples: [true] },
       },
       required: ['name'],
     },
+    local_backend: {
+      oneOf: [
+        { type: 'boolean' },
+        {
+          type: 'object',
+          properties: {
+            url: { type: 'string', examples: ['http://localhost:8081/api/v1'] },
+            allowed_hosts: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+          additionalProperties: false,
+        },
+      ],
+    },
     locale: { type: 'string', examples: ['en', 'fr', 'de'] },
+    i18n: i18nRoot,
     site_url: { type: 'string', examples: ['https://example.com'] },
     display_url: { type: 'string', examples: ['https://example.com'] },
     logo_url: { type: 'string', examples: ['https://example.com/images/logo.svg'] },
@@ -93,10 +187,13 @@ const getConfigSchema = () => ({
                 label_singular: { type: 'string' },
                 description: { type: 'string' },
                 file: { type: 'string' },
-                fields: fieldsConfig,
+                preview_path: { type: 'string' },
+                preview_path_date_field: { type: 'string' },
+                fields: fieldsConfig(),
               },
               required: ['name', 'label', 'file', 'fields'],
             },
+            uniqueItemProperties: ['name'],
           },
           identifier_field: { type: 'string' },
           summary: { type: 'string' },
@@ -105,6 +202,8 @@ const getConfigSchema = () => ({
           preview_path: { type: 'string' },
           preview_path_date_field: { type: 'string' },
           create: { type: 'boolean' },
+          publish: { type: 'boolean' },
+          hide: { type: 'boolean' },
           editor: {
             type: 'object',
             properties: {
@@ -121,10 +220,51 @@ const getConfigSchema = () => ({
               type: 'string',
             },
           },
-          fields: fieldsConfig,
+          fields: fieldsConfig(),
+          sortable_fields: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+          },
+          sortableFields: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+          },
+          view_filters: viewFilters,
+          nested: {
+            type: 'object',
+            properties: {
+              depth: { type: 'number', minimum: 1, maximum: 1000 },
+              summary: { type: 'string' },
+            },
+            required: ['depth'],
+          },
+          meta: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                  widget: { type: 'string' },
+                  index_file: { type: 'string' },
+                },
+                required: ['label', 'widget', 'index_file'],
+              },
+            },
+            additionalProperties: false,
+            minProperties: 1,
+          },
+          i18n: i18nCollection,
         },
         required: ['name', 'label'],
         oneOf: [{ required: ['files'] }, { required: ['folder', 'fields'] }],
+        not: {
+          required: ['sortable_fields', 'sortableFields'],
+        },
         if: { required: ['extension'] },
         then: {
           // Cannot infer format from extension.
@@ -144,11 +284,23 @@ const getConfigSchema = () => ({
           },
         },
       },
+      uniqueItemProperties: ['name'],
+    },
+    editor: {
+      type: 'object',
+      properties: {
+        preview: { type: 'boolean' },
+      },
     },
   },
   required: ['backend', 'collections'],
   anyOf: [{ required: ['media_folder'] }, { required: ['media_library'] }],
 });
+
+function getWidgetSchemas() {
+  const schemas = getWidgets().map(widget => ({ [widget.name]: widget.schema }));
+  return Object.assign(...schemas);
+}
 
 class ConfigError extends Error {
   constructor(errors, ...args) {
@@ -179,12 +331,46 @@ class ConfigError extends Error {
  * the config that is passed in.
  */
 export function validateConfig(config) {
-  const ajv = new AJV({ allErrors: true, jsonPointers: true });
+  const ajv = new AJV({ allErrors: true, jsonPointers: true, $data: true });
+  uniqueItemProperties(ajv);
+  select(ajv);
+  instanceOf(ajv);
+  prohibited(ajv);
   ajvErrors(ajv);
 
   const valid = ajv.validate(getConfigSchema(), config);
   if (!valid) {
-    console.error('Config Errors', ajv.errors);
-    throw new ConfigError(ajv.errors);
+    const errors = ajv.errors.map(e => {
+      switch (e.keyword) {
+        // TODO: remove after https://github.com/ajv-validator/ajv-keywords/pull/123 is merged
+        case 'uniqueItemProperties': {
+          const path = e.dataPath || '';
+          let newError = e;
+          if (path.endsWith('/fields')) {
+            newError = { ...e, message: 'fields names must be unique' };
+          } else if (path.endsWith('/files')) {
+            newError = { ...e, message: 'files names must be unique' };
+          } else if (path.endsWith('/collections')) {
+            newError = { ...e, message: 'collections names must be unique' };
+          }
+          return newError;
+        }
+        case 'instanceof': {
+          const path = e.dataPath || '';
+          let newError = e;
+          if (/fields\/\d+\/pattern\/\d+/.test(path)) {
+            newError = {
+              ...e,
+              message: 'should be a regular expression',
+            };
+          }
+          return newError;
+        }
+        default:
+          return e;
+      }
+    });
+    console.error('Config Errors', errors);
+    throw new ConfigError(errors);
   }
 }

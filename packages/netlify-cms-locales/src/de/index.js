@@ -1,4 +1,18 @@
 const de = {
+  auth: {
+    login: 'Login',
+    loggingIn: 'Sie werden eingeloggt...',
+    loginWithNetlifyIdentity: 'Mit Netlify Identity einloggen',
+    loginWithBitbucket: 'Mit Bitbucket einloggen',
+    loginWithGitHub: 'Mit GitHub einloggen',
+    loginWithGitLab: 'Mit GitLab einloggen',
+    errors: {
+      email: 'Stellen Sie sicher, Ihre E-Mail-Adresse einzugeben.',
+      password: 'Bitte geben Sie Ihr Passwort ein.',
+      identitySettings:
+        'Identity Einstellungen konnten nicht abgerufen werden. Stellen Sie bei der Verwendung des Git-Gateway Backends sicher, den Identity Service und das Git Gateway zu aktivieren.',
+    },
+  },
   app: {
     header: {
       content: 'Inhalt',
@@ -7,7 +21,7 @@ const de = {
       quickAdd: 'Schnell-Erstellung',
     },
     app: {
-      errorHeader: 'Fehler beim laden der CMS-Konfiguration.',
+      errorHeader: 'Fehler beim Laden der CMS-Konfiguration.',
       configErrors: 'Konfigurationsfehler',
       checkConfigYml: 'Überprüfen Sie die config.yml Konfigurationsdatei.',
       loadingConfig: 'Konfiguration laden...',
@@ -20,19 +34,41 @@ const de = {
   collection: {
     sidebar: {
       collections: 'Inhaltstypen',
+      allCollections: 'Allen Inhaltstypen',
       searchAll: 'Alles durchsuchen',
+      searchIn: 'Suchen in',
     },
     collectionTop: {
+      sortBy: 'Sortieren nach',
       viewAs: 'Anzeigen als',
-      newButton: 'Neuer %{collectionLabel}',
+      newButton: 'Neue(r) %{collectionLabel}',
+      ascending: 'Aufsteigend',
+      descending: 'Absteigend',
+      searchResults: 'Suchergebnisse für "%{searchTerm}"',
+      searchResultsInCollection: 'Suchergebnisse für "%{searchTerm}" in %{collection}',
+      filterBy: 'Filtern nach',
     },
     entries: {
       loadingEntries: 'Beiträge laden',
       cachingEntries: 'Beiträge zwischenspeichern',
       longerLoading: 'Diese Aktion kann einige Minuten in Anspruch nehmen',
+      noEntries: 'Keine Beiträge',
+    },
+    defaultFields: {
+      author: {
+        label: 'Autor',
+      },
+      updatedOn: {
+        label: 'Änderungsdatum',
+      },
     },
   },
   editor: {
+    editorControl: {
+      field: {
+        optional: 'optional',
+      },
+    },
     editorControlPane: {
       widget: {
         required: '%{fieldLabel} ist erforderlich.',
@@ -41,6 +77,15 @@ const de = {
         range: '%{fieldLabel} muss zwischen %{minValue} und %{maxValue} liegen.',
         min: '%{fieldLabel} muss größer als %{minValue} sein.',
         max: '%{fieldLabel} darf nicht größer als %{maxValue} sein.',
+        rangeCount: '%{fieldLabel} muss %{minCount} bis %{maxCount} Element(e) enthalten.',
+        rangeCountExact: '%{fieldLabel} muss exakt %{count} Element(e) enthalten.',
+        minCount: '%{fieldLabel} muss mindestens %{minCount} Element(e) enthalten.',
+        maxCount: '%{fieldLabel} darf maximal %{maxCount} Element(e) enthalten.',
+        invalidPath: `'%{path}' ist kein gültiger Pfad`,
+        pathExists: `Pfad '%{path}' existiert bereits`,
+      },
+      i18n: {
+        writingInLocale: 'Aktuelle Sprache: %{locale}',
       },
     },
     editor: {
@@ -48,10 +93,11 @@ const de = {
       onUpdatingWithUnsavedChanges:
         'Es sind noch ungespeicherte Änderungen vorhanden. Bitte speichern Sie diese, bevor Sie den Status aktualisieren.',
       onPublishingNotReady:
-        'Bitte setzten die den Status auf "Abgeschlossen" vor dem Veröffentlichen.',
+        'Bitte setzten die den Status vor dem Veröffentlichen auf "Abgeschlossen".',
       onPublishingWithUnsavedChanges:
         'Es sind noch ungespeicherte Änderungen vorhanden. Bitte speicheren Sie vor dem Veröffentlichen.',
-      onPublishing: 'Soll dieser Beitrag wirklich veröffentlich werden?',
+      onPublishing: 'Soll dieser Beitrag wirklich veröffentlicht werden?',
+      onUnpublishing: 'Soll die Veröffentlichung dieses Beitrags wirklich zurückgezogen werden?',
       onDeleteWithUnsavedChanges:
         'Möchten Sie diesen veröffentlichten Beitrag, sowie Ihre nicht gespeicherten Änderungen löschen?',
       onDeletePublishedEntry: 'Soll dieser veröffentlichte Beitrag wirklich gelöscht werden?',
@@ -67,14 +113,18 @@ const de = {
       publishing: 'Veröffentlichen...',
       publish: 'Veröffentlichen',
       published: 'Veröffentlicht',
+      unpublish: 'Veröffentlichung zurückziehen',
+      duplicate: 'Duplizieren',
+      unpublishing: 'Veröffentlichung wird zurückgezogen...',
       publishAndCreateNew: 'Veröffentlichen und neuen Beitrag erstellen',
+      publishAndDuplicate: 'Veröffentlichen und Beitrag duplizieren',
       deleteUnpublishedChanges: 'Unveröffentlichte Änderungen verwerfen',
       deleteUnpublishedEntry: 'Lösche unveröffentlichten Beitrag',
       deletePublishedEntry: 'Lösche veröffentlichten Beitrag',
       deleteEntry: 'Lösche Beitrag',
       saving: 'Speichern...',
       save: 'Speichern',
-      deleting: 'Entfernen...',
+      deleting: 'Löschen...',
       updating: 'Aktualisieren...',
       setStatus: 'Status setzen',
       backCollection: 'Zurück zu allen %{collectionLabel}',
@@ -89,11 +139,36 @@ const de = {
       deployButtonLabel: 'Live ansehen',
     },
     editorWidgets: {
+      markdown: {
+        richText: 'Rich Text',
+        markdown: 'Markdown',
+      },
+      image: {
+        choose: 'Wähle ein Bild',
+        chooseDifferent: 'Wähle ein anderes Bild',
+        remove: 'Entferne Bild',
+      },
+      file: {
+        choose: 'Wählen Sie eine Datei',
+        chooseDifferent: 'Wählen Sie eine andere Datei',
+        remove: 'Datei löschen',
+      },
       unknownControl: {
         noControl: "Kein Bedienelement für Widget '%{widget}'.",
       },
       unknownPreview: {
         noPreview: "Keine Vorschau für Widget '%{widget}'.",
+      },
+      headingOptions: {
+        headingOne: 'Überschrift 1',
+        headingTwo: 'Überschrift 2',
+        headingThree: 'Überschrift 3',
+        headingFour: 'Überschrift 4',
+        headingFive: 'Überschrift 5',
+        headingSix: 'Überschrift 6',
+      },
+      datetime: {
+        now: 'Jetzt',
       },
     },
   },
@@ -103,6 +178,7 @@ const de = {
     },
     mediaLibrary: {
       onDelete: 'Soll das ausgewählte Medium wirklich gelöscht werden?',
+      fileTooLarge: 'Datei zu groß.\nErlaubt sind nur Dateien bis %{size} kB.',
     },
     mediaLibraryModal: {
       loading: 'Laden...',
@@ -114,21 +190,26 @@ const de = {
       mediaAssets: 'Medien',
       search: 'Suchen...',
       uploading: 'Hochladen...',
-      uploadNew: 'Hochladen',
+      upload: 'Hochladen',
       deleting: 'Löschen...',
-      deleteSelected: 'Ausgewähltes Medium löschen',
-      chooseSelected: 'Ausgewähltes Medium verwenden',
+      deleteSelected: 'Ausgewähltes Element löschen',
+      chooseSelected: 'Ausgewähltes Element verwenden',
     },
   },
   ui: {
+    default: {
+      goBackToSite: 'Zurück zur Seite',
+    },
     errorBoundary: {
       title: 'Fehler',
       details: 'Ein Fehler ist aufgetreten - bitte ',
       reportIt: 'berichte ihn.',
       detailsHeading: 'Details',
+      privacyWarning:
+        'Beim Eröffnen eines Fehlerberichts werden automatisch die Fehlermeldung und Debugdaten eingefügt.\nBitte überprüfen Sie, ob die Informationen korrrekt sind und entfernen Sie ggfs. sensible Daten.',
       recoveredEntry: {
-        heading: 'Widerhergestellter Beitrag',
-        warning: 'Bitte speichern Sie sich das bevor Sie die Seite verlassen!',
+        heading: 'Wiederhergestellter Beitrag',
+        warning: 'Bitte sichern Sie sich diese Informationen, bevor Sie die Seite verlassen!',
         copyButtonLabel: 'In Zwischenablage speichern',
       },
     },
@@ -144,10 +225,17 @@ const de = {
       missingRequiredField: 'Oops, einige zwingend erforderliche Felder sind nicht ausgefüllt.',
       entrySaved: 'Beitrag gespeichert',
       entryPublished: 'Beitrag veröffentlicht',
+      entryUnpublished: 'Beitrag nicht mehr öffentlich',
       onFailToPublishEntry: 'Veröffentlichen fehlgeschlagen: %{details}',
+      onFailToUnpublishEntry:
+        'Veröffentlichung des Beitrags konnte nicht rückgängig gemacht werden: %{details}',
       entryUpdated: 'Beitragsstatus aktualisiert',
       onDeleteUnpublishedChanges: 'Unveröffentlichte Änderungen verworfen',
       onFailToAuth: '%{details}',
+      onLoggedOut:
+        'Sie wurden ausgeloggt. Bitte sichern Sie Ihre Daten und melden Sie sich erneut an.',
+      onBackendDown:
+        'Der Server ist aktuell nicht erreichbar. Für weitere Informationen, siehe: %{details}',
     },
   },
   workflow: {
@@ -157,6 +245,7 @@ const de = {
       newPost: 'Neuer Beitrag',
       description:
         '%{smart_count} Beitrag zur Überprüfung bereit, %{readyCount} bereit zur Veröffentlichung. |||| %{smart_count} Beiträge zur Überprüfung bereit, %{readyCount} bereit zur Veröffentlichung. ',
+      dateFormat: 'MMMM D',
     },
     workflowCard: {
       lastChange: '%{date} von %{author}',
@@ -173,7 +262,7 @@ const de = {
         'Nur Beiträge im Status "Abgeschlossen" können veröffentlicht werden. Bitte ziehen Sie den Beitrag in die "Abgeschlossen" Spalte um die Veröffentlichung zu aktivieren.',
       onPublishEntry: 'Soll dieser Beitrag wirklich veröffentlicht werden soll?',
       draftHeader: 'Entwurf',
-      inReviewHeader: 'Zur Überprüfung',
+      inReviewHeader: 'In Prüfung',
       readyHeader: 'Abgeschlossen',
       currentEntries: '%{smart_count} Beitrag |||| %{smart_count} Beiträge',
     },

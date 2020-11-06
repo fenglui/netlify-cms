@@ -5,7 +5,6 @@ describe('github API', () => {
     beforeEach(() => {
       const fetch = jest.fn();
       global.fetch = fetch;
-      global.Date = jest.fn(() => ({ getTime: () => 1000 }));
     });
 
     afterEach(() => {
@@ -14,7 +13,7 @@ describe('github API', () => {
 
     it('should fetch url with authorization header', async () => {
       const api = new API({
-        api_root: 'https://site.netlify.com/.netlify/git/github',
+        apiRoot: 'https://site.netlify.com/.netlify/git/github',
         tokenPromise: () => Promise.resolve('token'),
       });
 
@@ -27,17 +26,19 @@ describe('github API', () => {
       const result = await api.request('/some-path');
       expect(result).toEqual('some response');
       expect(fetch).toHaveBeenCalledTimes(1);
-      expect(fetch).toHaveBeenCalledWith(
-        'https://site.netlify.com/.netlify/git/github/some-path?ts=1000',
-        {
-          headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+      expect(fetch).toHaveBeenCalledWith('https://site.netlify.com/.netlify/git/github/some-path', {
+        cache: 'no-cache',
+        headers: {
+          Authorization: 'Bearer token',
+          'Content-Type': 'application/json; charset=utf-8',
         },
-      );
+        signal: expect.any(AbortSignal),
+      });
     });
 
     it('should throw error on not ok response with message property', async () => {
       const api = new API({
-        api_root: 'https://site.netlify.com/.netlify/git/github',
+        apiRoot: 'https://site.netlify.com/.netlify/git/github',
         tokenPromise: () => Promise.resolve('token'),
       });
 
@@ -60,7 +61,7 @@ describe('github API', () => {
 
     it('should throw error on not ok response with msg property', async () => {
       const api = new API({
-        api_root: 'https://site.netlify.com/.netlify/git/github',
+        apiRoot: 'https://site.netlify.com/.netlify/git/github',
         tokenPromise: () => Promise.resolve('token'),
       });
 
@@ -78,6 +79,18 @@ describe('github API', () => {
           status: 404,
           api: 'Git Gateway',
         }),
+      );
+    });
+  });
+
+  describe('nextUrlProcessor', () => {
+    it('should re-write github url', () => {
+      const api = new API({
+        apiRoot: 'https://site.netlify.com/.netlify/git/github',
+      });
+
+      expect(api.nextUrlProcessor()('https://api.github.com/repositories/10000/pulls')).toEqual(
+        'https://site.netlify.com/.netlify/git/github/pulls',
       );
     });
   });

@@ -15,12 +15,17 @@ import {
   colors,
   components,
   buttons,
-  lengths,
+  zIndex,
 } from 'netlify-cms-ui-default';
 import { status } from 'Constants/publishModes';
 import SettingsDropdown from 'UI/SettingsDropdown';
 
 const styles = {
+  noOverflow: css`
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  `,
   buttonMargin: css`
     margin: 0 10px;
   `,
@@ -30,7 +35,18 @@ const styles = {
     align-items: center;
     border: 0 solid ${colors.textFieldBorder};
   `,
+  publishedButton: css`
+    background-color: ${colorsRaw.tealLight};
+    color: ${colorsRaw.teal};
+  `,
 };
+
+const DropdownButton = styled(StyledDropdownButton)`
+  ${styles.noOverflow}
+  @media (max-width: 1200px) {
+    padding-left: 10px;
+  }
+`;
 
 const ToolbarContainer = styled.div`
   box-shadow: 0 2px 6px 0 rgba(68, 74, 87, 0.05), 0 1px 3px 0 rgba(68, 74, 87, 0.1),
@@ -40,7 +56,7 @@ const ToolbarContainer = styled.div`
   left: 0;
   width: 100%;
   min-width: 800px;
-  z-index: 300;
+  z-index: ${zIndex.zIndex300};
   background-color: #fff;
   height: 66px;
   display: flex;
@@ -130,7 +146,12 @@ const ToolbarButton = styled.button`
   ${buttons.button};
   ${buttons.default};
   ${styles.buttonMargin};
+  ${styles.noOverflow};
   display: block;
+
+  @media (max-width: 1200px) {
+    padding: 0 10px;
+  }
 `;
 
 const DeleteButton = styled(ToolbarButton)`
@@ -141,29 +162,19 @@ const SaveButton = styled(ToolbarButton)`
   ${buttons.lightBlue};
 `;
 
-const UnpublishButton = styled(StyledDropdownButton)`
-  background-color: ${colorsRaw.tealLight};
-  color: ${colorsRaw.teal};
+const PublishedToolbarButton = styled(DropdownButton)`
+  ${styles.publishedButton}
 `;
 
-const StatusPublished = styled.div`
-  ${styles.buttonMargin};
-  border: 1px solid ${colors.textFieldBorder};
-  border-radius: ${lengths.borderRadius};
-  background-color: ${colorsRaw.white};
-  color: ${colorsRaw.teal};
-  padding: 0 24px;
-  line-height: 36px;
-  cursor: default;
-  font-size: 14px;
-  font-weight: 500;
+const PublishedButton = styled(ToolbarButton)`
+  ${styles.publishedButton}
 `;
 
-const PublishButton = styled(StyledDropdownButton)`
+const PublishButton = styled(DropdownButton)`
   background-color: ${colorsRaw.teal};
 `;
 
-const StatusButton = styled(StyledDropdownButton)`
+const StatusButton = styled(DropdownButton)`
   background-color: ${colorsRaw.tealLight};
   color: ${colorsRaw.teal};
 `;
@@ -212,13 +223,16 @@ class EditorToolbar extends React.Component {
     isDeleting: PropTypes.bool,
     onPersist: PropTypes.func.isRequired,
     onPersistAndNew: PropTypes.func.isRequired,
+    onPersistAndDuplicate: PropTypes.func.isRequired,
     showDelete: PropTypes.bool.isRequired,
     onDelete: PropTypes.func.isRequired,
     onDeleteUnpublishedChanges: PropTypes.func.isRequired,
     onChangeStatus: PropTypes.func.isRequired,
     onPublish: PropTypes.func.isRequired,
     unPublish: PropTypes.func.isRequired,
+    onDuplicate: PropTypes.func.isRequired,
     onPublishAndNew: PropTypes.func.isRequired,
+    onPublishAndDuplicate: PropTypes.func.isRequired,
     user: ImmutablePropTypes.map.isRequired,
     hasChanged: PropTypes.bool,
     displayUrl: PropTypes.string,
@@ -233,6 +247,7 @@ class EditorToolbar extends React.Component {
     deployPreview: ImmutablePropTypes.map,
     loadDeployPreview: PropTypes.func.isRequired,
     t: PropTypes.func.isRequired,
+    editorBackLink: PropTypes.string.isRequired,
   };
 
   componentDidMount() {
@@ -288,24 +303,146 @@ class EditorToolbar extends React.Component {
     );
   };
 
-  renderSimplePublishControls = () => {
-    const {
-      collection,
-      onPersist,
-      onPersistAndNew,
-      isPersisting,
-      hasChanged,
-      isNewEntry,
-      t,
-    } = this.props;
-    if (!isNewEntry && !hasChanged) {
-      return (
-        <>
-          {this.renderDeployPreviewControls(t('editor.editorToolbar.deployButtonLabel'))}
-          <StatusPublished>{t('editor.editorToolbar.published')}</StatusPublished>
-        </>
-      );
-    }
+  renderWorkflowStatusControls = () => {
+    const { isUpdatingStatus, onChangeStatus, currentStatus, t, useOpenAuthoring } = this.props;
+    return (
+      <ToolbarDropdown
+        dropdownTopOverlap="40px"
+        dropdownWidth="120px"
+        renderButton={() => (
+          <StatusButton>
+            {isUpdatingStatus
+              ? t('editor.editorToolbar.updating')
+              : t('editor.editorToolbar.setStatus')}
+          </StatusButton>
+        )}
+      >
+        <StatusDropdownItem
+          label={t('editor.editorToolbar.draft')}
+          onClick={() => onChangeStatus('DRAFT')}
+          icon={currentStatus === status.get('DRAFT') ? 'check' : null}
+        />
+        <StatusDropdownItem
+          label={t('editor.editorToolbar.inReview')}
+          onClick={() => onChangeStatus('PENDING_REVIEW')}
+          icon={currentStatus === status.get('PENDING_REVIEW') ? 'check' : null}
+        />
+        {useOpenAuthoring ? (
+          ''
+        ) : (
+          <StatusDropdownItem
+            label={t('editor.editorToolbar.ready')}
+            onClick={() => onChangeStatus('PENDING_PUBLISH')}
+            icon={currentStatus === status.get('PENDING_PUBLISH') ? 'check' : null}
+          />
+        )}
+      </ToolbarDropdown>
+    );
+  };
+
+  renderNewEntryWorkflowPublishControls = ({ canCreate, canPublish }) => {
+    const { isPublishing, onPublish, onPublishAndNew, onPublishAndDuplicate, t } = this.props;
+
+    return canPublish ? (
+      <ToolbarDropdown
+        dropdownTopOverlap="40px"
+        dropdownWidth="150px"
+        renderButton={() => (
+          <PublishButton>
+            {isPublishing
+              ? t('editor.editorToolbar.publishing')
+              : t('editor.editorToolbar.publish')}
+          </PublishButton>
+        )}
+      >
+        <DropdownItem
+          label={t('editor.editorToolbar.publishNow')}
+          icon="arrow"
+          iconDirection="right"
+          onClick={onPublish}
+        />
+        {canCreate ? (
+          <>
+            <DropdownItem
+              label={t('editor.editorToolbar.publishAndCreateNew')}
+              icon="add"
+              onClick={onPublishAndNew}
+            />
+            <DropdownItem
+              label={t('editor.editorToolbar.publishAndDuplicate')}
+              icon="add"
+              onClick={onPublishAndDuplicate}
+            />
+          </>
+        ) : null}
+      </ToolbarDropdown>
+    ) : (
+      ''
+    );
+  };
+
+  renderExistingEntryWorkflowPublishControls = ({ canCreate, canPublish }) => {
+    const { unPublish, onDuplicate, isPersisting, t } = this.props;
+
+    return canPublish || canCreate ? (
+      <ToolbarDropdown
+        dropdownTopOverlap="40px"
+        dropdownWidth="150px"
+        renderButton={() => (
+          <PublishedToolbarButton>
+            {isPersisting
+              ? t('editor.editorToolbar.unpublishing')
+              : t('editor.editorToolbar.published')}
+          </PublishedToolbarButton>
+        )}
+      >
+        {canPublish && (
+          <DropdownItem
+            label={t('editor.editorToolbar.unpublish')}
+            icon="arrow"
+            iconDirection="right"
+            onClick={unPublish}
+          />
+        )}
+        {canCreate && (
+          <DropdownItem
+            label={t('editor.editorToolbar.duplicate')}
+            icon="add"
+            onClick={onDuplicate}
+          />
+        )}
+      </ToolbarDropdown>
+    ) : (
+      ''
+    );
+  };
+
+  renderExistingEntrySimplePublishControls = ({ canCreate }) => {
+    const { onDuplicate, t } = this.props;
+    return canCreate ? (
+      <ToolbarDropdown
+        dropdownTopOverlap="40px"
+        dropdownWidth="150px"
+        renderButton={() => (
+          <PublishedToolbarButton>{t('editor.editorToolbar.published')}</PublishedToolbarButton>
+        )}
+      >
+        {
+          <DropdownItem
+            label={t('editor.editorToolbar.duplicate')}
+            icon="add"
+            onClick={onDuplicate}
+          />
+        }
+      </ToolbarDropdown>
+    ) : (
+      <PublishedButton>{t('editor.editorToolbar.published')}</PublishedButton>
+    );
+  };
+
+  renderNewEntrySimplePublishControls = ({ canCreate }) => {
+    const { onPersist, onPersistAndNew, onPersistAndDuplicate, isPersisting, t } = this.props;
+
     return (
       <div>
         <ToolbarDropdown
@@ -320,21 +457,43 @@ class EditorToolbar extends React.Component {
           )}
         >
           <DropdownItem
-            label="Publish now"
+            label={t('editor.editorToolbar.publishNow')}
             icon="arrow"
             iconDirection="right"
             onClick={onPersist}
           />
-          {collection.get('create') ? (
-            <DropdownItem
-              label={t('editor.editorToolbar.publishAndCreateNew')}
-              icon="add"
-              onClick={onPersistAndNew}
-            />
+          {canCreate ? (
+            <>
+              <DropdownItem
+                label={t('editor.editorToolbar.publishAndCreateNew')}
+                icon="add"
+                onClick={onPersistAndNew}
+              />
+              <DropdownItem
+                label={t('editor.editorToolbar.publishAndDuplicate')}
+                icon="add"
+                onClick={onPersistAndDuplicate}
+              />
+            </>
           ) : null}
         </ToolbarDropdown>
       </div>
     );
+  };
+
+  renderSimplePublishControls = () => {
+    const { collection, hasChanged, isNewEntry, t } = this.props;
+
+    const canCreate = collection.get('create');
+    if (!isNewEntry && !hasChanged) {
+      return (
+        <>
+          {this.renderDeployPreviewControls(t('editor.editorToolbar.deployButtonLabel'))}
+          {this.renderExistingEntrySimplePublishControls({ canCreate })}
+        </>
+      );
+    }
+    return this.renderNewEntrySimplePublishControls({ canCreate });
   };
 
   renderWorkflowSaveControls = () => {
@@ -377,84 +536,17 @@ class EditorToolbar extends React.Component {
   };
 
   renderWorkflowPublishControls = () => {
-    const {
-      collection,
-      isUpdatingStatus,
-      isPublishing,
-      onChangeStatus,
-      onPublish,
-      unPublish,
-      onPublishAndNew,
-      currentStatus,
-      isNewEntry,
-      useOpenAuthoring,
-      isPersisting,
-      t,
-    } = this.props;
+    const { collection, currentStatus, isNewEntry, useOpenAuthoring, t } = this.props;
+
+    const canCreate = collection.get('create');
+    const canPublish = collection.get('publish') && !useOpenAuthoring;
+
     if (currentStatus) {
       return (
         <>
           {this.renderDeployPreviewControls(t('editor.editorToolbar.deployPreviewButtonLabel'))}
-          <ToolbarDropdown
-            dropdownTopOverlap="40px"
-            dropdownWidth="120px"
-            renderButton={() => (
-              <StatusButton>
-                {isUpdatingStatus
-                  ? t('editor.editorToolbar.updating')
-                  : t('editor.editorToolbar.setStatus')}
-              </StatusButton>
-            )}
-          >
-            <StatusDropdownItem
-              label={t('editor.editorToolbar.draft')}
-              onClick={() => onChangeStatus('DRAFT')}
-              icon={currentStatus === status.get('DRAFT') ? 'check' : null}
-            />
-            <StatusDropdownItem
-              label={t('editor.editorToolbar.inReview')}
-              onClick={() => onChangeStatus('PENDING_REVIEW')}
-              icon={currentStatus === status.get('PENDING_REVIEW') ? 'check' : null}
-            />
-            {useOpenAuthoring ? (
-              ''
-            ) : (
-              <StatusDropdownItem
-                label={t('editor.editorToolbar.ready')}
-                onClick={() => onChangeStatus('PENDING_PUBLISH')}
-                icon={currentStatus === status.get('PENDING_PUBLISH') ? 'check' : null}
-              />
-            )}
-          </ToolbarDropdown>
-          {useOpenAuthoring ? (
-            ''
-          ) : (
-            <ToolbarDropdown
-              dropdownTopOverlap="40px"
-              dropdownWidth="150px"
-              renderButton={() => (
-                <PublishButton>
-                  {isPublishing
-                    ? t('editor.editorToolbar.publishing')
-                    : t('editor.editorToolbar.publish')}
-                </PublishButton>
-              )}
-            >
-              <DropdownItem
-                label={t('editor.editorToolbar.publishNow')}
-                icon="arrow"
-                iconDirection="right"
-                onClick={onPublish}
-              />
-              {collection.get('create') ? (
-                <DropdownItem
-                  label={t('editor.editorToolbar.publishAndCreateNew')}
-                  icon="add"
-                  onClick={onPublishAndNew}
-                />
-              ) : null}
-            </ToolbarDropdown>
-          )}
+          {this.renderWorkflowStatusControls()}
+          {this.renderNewEntryWorkflowPublishControls({ canCreate, canPublish })}
         </>
       );
     }
@@ -466,35 +558,27 @@ class EditorToolbar extends React.Component {
       return (
         <>
           {this.renderDeployPreviewControls(t('editor.editorToolbar.deployButtonLabel'))}
-          <ToolbarDropdown
-            dropdownTopOverlap="40px"
-            dropdownWidth="150px"
-            renderButton={() => (
-              <UnpublishButton>
-                {isPersisting
-                  ? t('editor.editorToolbar.unpublishing')
-                  : t('editor.editorToolbar.published')}
-              </UnpublishButton>
-            )}
-          >
-            <DropdownItem
-              label={t('editor.editorToolbar.unpublish')}
-              icon="arrow"
-              iconDirection="right"
-              onClick={unPublish}
-            />
-          </ToolbarDropdown>
+          {this.renderExistingEntryWorkflowPublishControls({ canCreate, canPublish })}
         </>
       );
     }
   };
 
   render() {
-    const { user, hasChanged, displayUrl, collection, hasWorkflow, onLogoutClick, t } = this.props;
+    const {
+      user,
+      hasChanged,
+      displayUrl,
+      collection,
+      hasWorkflow,
+      onLogoutClick,
+      t,
+      editorBackLink,
+    } = this.props;
 
     return (
       <ToolbarContainer>
-        <ToolbarSectionBackLink to={`/collections/${collection.get('name')}`}>
+        <ToolbarSectionBackLink to={editorBackLink}>
           <BackArrow>←</BackArrow>
           <div>
             <BackCollection>

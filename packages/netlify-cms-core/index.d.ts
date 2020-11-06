@@ -1,21 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module 'netlify-cms-core' {
   import React, { ComponentType } from 'react';
-  import { Map } from 'immutable';
+  import { List, Map } from 'immutable';
 
-  export type CmsBackendType
-    = 'git-gateway'
-    | 'github'
-    | 'gitlab'
-    | 'bitbucket'
-    | 'test-repo';
+  export type CmsBackendType = 'git-gateway' | 'github' | 'gitlab' | 'bitbucket' | 'test-repo';
 
-  export type CmsMapWidgetType
-    = 'Point'
-    | 'LineString'
-    | 'Polygon';
+  export type CmsMapWidgetType = 'Point' | 'LineString' | 'Polygon';
 
-  export type CmsMarkdownWidgetButton
-    = 'bold'
+  export type CmsMarkdownWidgetButton =
+    | 'bold'
     | 'italic'
     | 'code'
     | 'link'
@@ -30,17 +23,13 @@ declare module 'netlify-cms-core' {
     | 'bulleted-list'
     | 'numbered-list';
 
-  export type CmsFilesExtension
-    = 'yml'
-    | 'yaml'
-    | 'toml'
-    | 'json'
-    | 'md'
-    | 'markdown'
-    | 'html';
+  export interface CmsSelectWidgetOptionObject {
+    label: string;
+    value: any;
+  }
 
-  export type CmsCollectionFormatType
-    = 'yml'
+  export type CmsCollectionFormatType =
+    | 'yml'
     | 'yaml'
     | 'toml'
     | 'json'
@@ -60,6 +49,109 @@ declare module 'netlify-cms-core' {
     label?: string;
     widget?: string;
     required?: boolean;
+    hint?: string;
+    pattern?: [string, string];
+    default?: any;
+
+    /** If widget === "code" */
+    default_language?: string;
+    allow_language_selection?: boolean;
+    keys?: { code: string; lang: string };
+    output_code_only?: boolean;
+
+    /** If widget === "datetime" */
+    format?: string;
+    date_format?: boolean | string;
+    time_format?: boolean | string;
+    picker_utc?: boolean;
+
+    /**
+     * @deprecated Use date_format instead
+     */
+    dateFormat?: boolean | string;
+    /**
+     * @deprecated Use time_format instead
+     */
+    timeFormat?: boolean | string;
+    /**
+     * @deprecated Use picker_utc instead
+     */
+    pickerUtc?: boolean;
+
+    /** If widget === "file" || widget === "image" */
+    media_library?: CmsMediaLibrary;
+    allow_multiple?: boolean;
+    config?: any;
+
+    /** If widget === "object" || widget === "list" */
+    fields?: CmsField[];
+    collapsed?: boolean;
+
+    /** If widget === "list" */
+    field?: CmsField;
+    allow_add?: boolean;
+    summary?: string;
+    minimize_collapsed?: boolean;
+    label_singular?: string;
+    types?: CmsField[];
+
+    /** If widget === "map" */
+    decimals?: number;
+    type?: CmsMapWidgetType;
+
+    /** If widget === "markdown" */
+    minimal?: boolean;
+    buttons?: CmsMarkdownWidgetButton[];
+    editor_components?: string[];
+
+    /**
+     * @deprecated Use editor_components instead
+     */
+    editorComponents?: string[];
+
+    /** If widget === "number" */
+    value_type?: 'int' | 'float' | string;
+    step?: number;
+
+    /**
+     * @deprecated Use valueType instead
+     */
+    valueType?: 'int' | 'float' | string;
+
+    /** If widget === "number" || widget === "select" */
+    min?: number;
+    max?: number;
+
+    /** If widget === "relation" || widget === "select" */
+    multiple?: boolean;
+
+    /** If widget === "relation" */
+    collection?: string;
+    value_field?: string;
+    search_fields?: string[];
+    file?: string;
+    display_fields?: string[];
+    options_length?: number;
+
+    /**
+     * @deprecated Use value_field instead
+     */
+    valueField?: string;
+    /**
+     * @deprecated Use search_fields instead
+     */
+    searchFields?: string[];
+    /**
+     * @deprecated Use display_fields instead
+     */
+    displayFields?: string[];
+    /**
+     * @deprecated Use options_length instead
+     */
+    optionsLength?: number;
+
+    /** If widget === "select" */
+    options?: string[] | CmsSelectWidgetOptionObject[];
   }
 
   export interface CmsCollectionFile {
@@ -84,19 +176,44 @@ declare module 'netlify-cms-core' {
     preview_path?: string;
     preview_path_date_field?: string;
     create?: boolean;
+    delete?: boolean;
     editor?: {
       preview?: boolean;
     };
+
+    /**
+     * It accepts the following values: yml, yaml, toml, json, md, markdown, html
+     *
+     * You may also specify a custom extension not included in the list above, by specifying the format value.
+     */
+    extension?: string;
     format?: CmsCollectionFormatType;
-    extension?: CmsFilesExtension;
+
     frontmatter_delimiter?: string[] | string;
     fields?: CmsField[];
+    filter?: { field: string; value: any };
+    path?: string;
+    media_folder?: string;
+    public_folder?: string;
+    sortable_fields?: string[];
+
+    /**
+     * @deprecated Use sortable_fields instead
+     */
+    sortableFields?: string[];
   }
 
   export interface CmsBackend {
     name: CmsBackendType;
     auth_scope?: CmsAuthScope;
     open_authoring?: boolean;
+    repo?: string;
+    branch?: string;
+    api_root?: string;
+    site_domain?: string;
+    base_url?: string;
+    auth_endpoint?: string;
+    cms_label_prefix?: string;
   }
 
   export interface CmsSlug {
@@ -130,18 +247,15 @@ declare module 'netlify-cms-core' {
     widget: string;
   }
 
-  export interface EditorComponentData {
-    id: number;
-  }
-
   export interface EditorComponentOptions {
     id: string;
     label: string;
     fields: EditorComponentField[];
     pattern: RegExp;
-    fromBlock: (match: RegExpMatchArray) => EditorComponentData;
-    toBlock: (data: EditorComponentData) => string;
-    toPreview: (data: EditorComponentData) => string;
+    allow_add?: boolean;
+    fromBlock: (match: RegExpMatchArray) => any;
+    toBlock: (data: any) => string;
+    toPreview: (data: any) => string;
   }
 
   export interface PreviewStyleOptions {
@@ -160,14 +274,14 @@ declare module 'netlify-cms-core' {
 
   export interface CmsWidgetParam {
     name: string;
-    controlComponent: ComponentType;
-    previewComponent?: ComponentType;
+    controlComponent: ComponentType<any>;
+    previewComponent?: ComponentType<any>;
     globalStyles: any;
   }
 
   export interface CmsWidget {
-    control: ComponentType;
-    preview?: ComponentType;
+    control: ComponentType<any>;
+    preview?: ComponentType<any>;
     globalStyles?: any;
   }
 
@@ -187,13 +301,13 @@ declare module 'netlify-cms-core' {
       [name: string]: CmsRegistryBackend;
     };
     templates: {
-      [name: string]: ComponentType;
+      [name: string]: ComponentType<any>;
     };
     previewStyles: PreviewStyle[];
     widgets: {
       [name: string]: CmsWidget;
     };
-    editorComponents: Map<string, ComponentType>;
+    editorComponents: Map<string, ComponentType<any>>;
     widgetValueSerializers: {
       [name: string]: CmsWidgetValueSerializer;
     };
@@ -203,13 +317,30 @@ declare module 'netlify-cms-core' {
     };
   }
 
+  type GetAssetFunction = (
+    asset: string,
+  ) => { url: string; path: string; field?: any; fileObj: File };
+
+  export type PreviewTemplateComponentProps = {
+    entry: Map<string, any>;
+    collection: Map<string, any>;
+    widgetFor: (name: any, fields?: any, values?: any, fieldsMetaData?: any) => JSX.Element | null;
+    widgetsFor: (name: any) => any;
+    getAsset: GetAssetFunction;
+    boundGetAsset: (collection: any, path: any) => GetAssetFunction;
+    fieldsMetaData: Map<string, any>;
+    config: Map<string, any>;
+    fields: List<Map<string, any>>;
+    isLoadingAsset: boolean;
+  };
+
   export interface CMS {
     getBackend: (name: string) => CmsRegistryBackend | undefined;
-    getEditorComponents: () => Map<string, ComponentType>;
+    getEditorComponents: () => Map<string, ComponentType<any>>;
     getLocale: (locale: string) => CmsLocalePhrases | undefined;
     getMediaLibrary: (name: string) => CmsMediaLibrary | undefined;
     getPreviewStyles: () => PreviewStyle[];
-    getPreviewTemplate: (name: string) => ComponentType | undefined;
+    getPreviewTemplate: (name: string) => ComponentType<PreviewTemplateComponentProps> | undefined;
     getWidget: (name: string) => CmsWidget | undefined;
     getWidgetValueSerializer: (widgetName: string) => CmsWidgetValueSerializer | undefined;
     init: (options?: InitOptions) => void;
@@ -218,9 +349,19 @@ declare module 'netlify-cms-core' {
     registerLocale: (locale: string, phrases: CmsLocalePhrases) => void;
     registerMediaLibrary: (mediaLibrary: CmsMediaLibrary, options?: CmsMediaLibraryOptions) => void;
     registerPreviewStyle: (filePath: string, options?: PreviewStyleOptions) => void;
-    registerPreviewTemplate: (name: string, component: ComponentType) => void;
-    registerWidget: (widget: string | CmsWidgetParam, control: ComponentType, preview?: ComponentType) => void;
-    registerWidgetValueSerializer: (widgetName: string, serializer: CmsWidgetValueSerializer) => void;
+    registerPreviewTemplate: (
+      name: string,
+      component: ComponentType<PreviewTemplateComponentProps>,
+    ) => void;
+    registerWidget: (
+      widget: string | CmsWidgetParam,
+      control?: ComponentType<any>,
+      preview?: ComponentType<any>,
+    ) => void;
+    registerWidgetValueSerializer: (
+      widgetName: string,
+      serializer: CmsWidgetValueSerializer,
+    ) => void;
     resolveWidget: (name: string) => CmsWidget | undefined;
   }
 

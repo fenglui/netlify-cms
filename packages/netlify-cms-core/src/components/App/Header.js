@@ -1,9 +1,8 @@
-/** @jsx jsx */
 import PropTypes from 'prop-types';
 import React from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/core';
 import { translate } from 'react-polyglot';
 import { NavLink } from 'react-router-dom';
 import {
@@ -15,8 +14,11 @@ import {
   lengths,
   shadows,
   buttons,
+  zIndex,
 } from 'netlify-cms-ui-default';
 import SettingsDropdown from 'UI/SettingsDropdown';
+import { connect } from 'react-redux';
+import { checkBackendStatus } from '../../actions/status';
 
 const styles = {
   buttonActive: css`
@@ -32,7 +34,7 @@ const AppHeader = props => (
       width: 100%;
       top: 0;
       background-color: ${colors.foreground};
-      z-index: 300;
+      z-index: ${zIndex.zIndex300};
       height: ${lengths.topBarHeight};
     `}
     {...props}
@@ -120,7 +122,20 @@ class Header extends React.Component {
     displayUrl: PropTypes.string,
     isTestRepo: PropTypes.bool,
     t: PropTypes.func.isRequired,
+    checkBackendStatus: PropTypes.func.isRequired,
   };
+
+  intervalId;
+
+  componentDidMount() {
+    this.intervalId = setInterval(() => {
+      this.props.checkBackendStatus();
+    }, 5 * 60 * 1000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.intervalId);
+  }
 
   handleCreatePostClick = collectionName => {
     const { onCreateEntryClick } = this.props;
@@ -211,4 +226,8 @@ class Header extends React.Component {
   }
 }
 
-export default translate()(Header);
+const mapDispatchToProps = {
+  checkBackendStatus,
+};
+
+export default connect(null, mapDispatchToProps)(translate()(Header));

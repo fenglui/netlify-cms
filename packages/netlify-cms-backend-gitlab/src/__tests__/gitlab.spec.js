@@ -1,6 +1,5 @@
 jest.mock('netlify-cms-core/src/backend');
 import { fromJS } from 'immutable';
-import { partial } from 'lodash';
 import { oneLine, stripIndent } from 'common-tags';
 import nock from 'nock';
 import { Cursor } from 'netlify-cms-lib-util';
@@ -94,6 +93,14 @@ const resp = {
       id: 1,
     },
   },
+  branch: {
+    success: {
+      name: 'master',
+      commit: {
+        id: 1,
+      },
+    },
+  },
   project: {
     success: {
       permissions: {
@@ -175,7 +182,7 @@ describe('gitlab backend', () => {
   }
 
   function mockApi(backend) {
-    return nock(backend.implementation.api_root);
+    return nock(backend.implementation.apiRoot);
   }
 
   function interceptAuth(backend, { userResponse, projectResponse } = {}) {
@@ -189,6 +196,14 @@ describe('gitlab backend', () => {
       .get(expectedRepoUrl)
       .query(true)
       .reply(200, projectResponse || resp.project.success);
+  }
+
+  function interceptBranch(backend, { branch = 'master' } = {}) {
+    const api = mockApi(backend);
+    api
+      .get(`${expectedRepoUrl}/repository/branches/${encodeURIComponent(branch)}`)
+      .query(true)
+      .reply(200, resp.branch.success);
   }
 
   function parseQuery(uri) {
@@ -206,7 +221,7 @@ describe('gitlab backend', () => {
   function createHeaders(backend, { basePath, path, page, perPage, pageCount, totalCount }) {
     const pageNum = parseInt(page, 10);
     const pageCountNum = parseInt(pageCount, 10);
-    const url = `${backend.implementation.api_root}${basePath}`;
+    const url = `${backend.implementation.apiRoot}${basePath}`;
     const link = linkPage =>
       `<${url}?id=${expectedRepo}&page=${linkPage}&path=${path}&per_page=${perPage}&recursive=false>`;
 
@@ -274,6 +289,17 @@ describe('gitlab backend', () => {
       .get(url)
       .query(true)
       .reply(200, mockRepo.files[path]);
+
+    api
+      .get(`${expectedRepoUrl}/repository/commits`)
+      .query(({ path }) => path === path)
+      .reply(200, [
+        {
+          author_name: 'author_name',
+          author_email: 'author_email',
+          authored_date: 'authored_date',
+        },
+      ]);
   }
 
   function sharedSetup() {
@@ -286,18 +312,8 @@ describe('gitlab backend', () => {
     });
   }
 
-  it('throws if configuration requires editorial workflow', () => {
-    const resolveBackendWithWorkflow = partial(resolveBackend, {
-      ...defaultConfig,
-      publish_mode: 'editorial_workflow',
-    });
-    expect(resolveBackendWithWorkflow).toThrowErrorMatchingInlineSnapshot(
-      `"The GitLab backend does not support the Editorial Workflow."`,
-    );
-  });
-
   it('throws if configuration does not include repo', () => {
-    expect(resolveBackend).toThrowErrorMatchingInlineSnapshot(
+    expect(() => resolveBackend({ backend: {} })).toThrowErrorMatchingInlineSnapshot(
       `"The GitLab backend needs a \\"repo\\" in the backend configuration."`,
     );
   });
@@ -380,7 +396,17 @@ describe('gitlab backend', () => {
 
       interceptFiles(backend, entryTree.path);
       interceptCollection(backend, collectionContentConfig);
-      const entry = await backend.getEntry(fromJS(collectionContentConfig), slug);
+
+      const entry = await backend.getEntry(
+        {
+          config: fromJS({}),
+          integrations: fromJS([]),
+          entryDraft: fromJS({}),
+          mediaLibrary: fromJS({}),
+        },
+        fromJS(collectionContentConfig),
+        slug,
+      );
 
       expect(entry).toEqual(expect.objectContaining({ path: entryTree.path }));
     });
@@ -398,6 +424,7 @@ describe('gitlab backend', () => {
 
       expect(entries).toEqual({
         cursor: expect.any(Cursor),
+        pagination: 1,
         entries: expect.arrayContaining(
           tree.map(file => expect.objectContaining({ path: file.path })),
         ),
@@ -407,6 +434,7 @@ describe('gitlab backend', () => {
 
     it('returns all entries from folder collection', async () => {
       const tree = mockRepo.tree[collectionManyEntriesConfig.folder];
+      interceptBranch(backend);
       tree.forEach(file => interceptFiles(backend, file.path));
 
       interceptCollection(backend, collectionManyEntriesConfig, { repeat: 5 });
@@ -432,11 +460,11 @@ describe('gitlab backend', () => {
       expect(entries.entries).toHaveLength(2);
     });
 
-    it('returns last page from paginated folder collection tree', async () => {
+    it('returns first page from paginated folder collection tree', async () => {
       const tree = mockRepo.tree[collectionManyEntriesConfig.folder];
-      const pageTree = tree.slice(-20);
+      const pageTree = tree.slice(0, 20);
       pageTree.forEach(file => interceptFiles(backend, file.path));
-      interceptCollection(backend, collectionManyEntriesConfig, { page: 25 });
+      interceptCollection(backend, collectionManyEntriesConfig, { page: 1 });
       const entries = await backend.listEntries(fromJS(collectionManyEntriesConfig));
 
       expect(entries.entries).toEqual(
@@ -451,13 +479,13 @@ describe('gitlab backend', () => {
 
     it('returns complete last page of paginated tree', async () => {
       const tree = mockRepo.tree[collectionManyEntriesConfig.folder];
-      tree.slice(-20).forEach(file => interceptFiles(backend, file.path));
-      interceptCollection(backend, collectionManyEntriesConfig, { page: 25 });
+      tree.slice(0, 20).forEach(file => interceptFiles(backend, file.path));
+      interceptCollection(backend, collectionManyEntriesConfig, { page: 1 });
       const entries = await backend.listEntries(fromJS(collectionManyEntriesConfig));
 
-      const nextPageTree = tree.slice(-40, -20);
+      const nextPageTree = tree.slice(20, 40);
       nextPageTree.forEach(file => interceptFiles(backend, file.path));
-      interceptCollection(backend, collectionManyEntriesConfig, { page: 24 });
+      interceptCollection(backend, collectionManyEntriesConfig, { page: 2 });
       const nextPage = await backend.traverseCursor(entries.cursor, 'next');
 
       expect(nextPage.entries).toEqual(
@@ -467,15 +495,44 @@ describe('gitlab backend', () => {
       );
       expect(nextPage.entries).toHaveLength(20);
 
-      const prevPageTree = tree.slice(-20);
+      const lastPageTree = tree.slice(-20);
+      lastPageTree.forEach(file => interceptFiles(backend, file.path));
       interceptCollection(backend, collectionManyEntriesConfig, { page: 25 });
-      const prevPage = await backend.traverseCursor(nextPage.cursor, 'prev');
-      expect(prevPage.entries).toEqual(
+      const lastPage = await backend.traverseCursor(nextPage.cursor, 'last');
+      expect(lastPage.entries).toEqual(
         expect.arrayContaining(
-          prevPageTree.map(file => expect.objectContaining({ path: file.path })),
+          lastPageTree.map(file => expect.objectContaining({ path: file.path })),
         ),
       );
-      expect(prevPage.entries).toHaveLength(20);
+      expect(lastPage.entries).toHaveLength(20);
+    });
+  });
+
+  describe('filterFile', () => {
+    it('should return true for nested file with matching depth', () => {
+      backend = resolveBackend(defaultConfig);
+
+      expect(
+        backend.implementation.filterFile(
+          'content/posts',
+          { name: 'index.md', path: 'content/posts/dir1/dir2/index.md' },
+          'md',
+          3,
+        ),
+      ).toBe(true);
+    });
+
+    it('should return false for nested file with non matching depth', () => {
+      backend = resolveBackend(defaultConfig);
+
+      expect(
+        backend.implementation.filterFile(
+          'content/posts',
+          { name: 'index.md', path: 'content/posts/dir1/dir2/index.md' },
+          'md',
+          2,
+        ),
+      ).toBe(false);
     });
   });
 

@@ -49,6 +49,28 @@ const ErrorCodeBlock = styled.pre`
   line-height: 1.5;
 `;
 
+const getDefaultPath = collections => {
+  const first = collections.filter(collection => collection.get('hide') !== true).first();
+  if (first) {
+    return `/collections/${first.get('name')}`;
+  } else {
+    throw new Error('Could not find a non hidden collection');
+  }
+};
+
+const RouteInCollection = ({ collections, render, ...props }) => {
+  const defaultPath = getDefaultPath(collections);
+  return (
+    <Route
+      {...props}
+      render={routeProps => {
+        const collectionExists = collections.get(routeProps.match.params.name);
+        return collectionExists ? render(routeProps) : <Redirect to={defaultPath} />;
+      }}
+    />
+  );
+};
+
 class App extends React.Component {
   static propTypes = {
     auth: ImmutablePropTypes.map,
@@ -113,8 +135,9 @@ class App extends React.Component {
           siteId: this.props.config.getIn(['backend', 'site_domain']),
           base_url: this.props.config.getIn(['backend', 'base_url'], null),
           authEndpoint: this.props.config.getIn(['backend', 'auth_endpoint']),
-          config: this.props.config,
+          config: this.props.config.toJS(),
           clearHash: () => history.replace('/'),
+          t,
         })}
       </div>
     );
@@ -155,7 +178,7 @@ class App extends React.Component {
       return this.authenticating(t);
     }
 
-    const defaultPath = `/collections/${collections.first().get('name')}`;
+    const defaultPath = getDefaultPath(collections);
     const hasWorkflow = publishMode === EDITORIAL_WORKFLOW;
 
     return (
@@ -177,29 +200,55 @@ class App extends React.Component {
           <Switch>
             <Redirect exact from="/" to={defaultPath} />
             <Redirect exact from="/search/" to={defaultPath} />
-            {hasWorkflow ? <Route path="/workflow" component={Workflow} /> : null}
-            <Route
+            <RouteInCollection
               exact
-              path="/collections/:name"
-              render={props => {
-                const collectionExists = collections.get(props.match.params.name);
-                return collectionExists ? <Collection {...props} /> : <Redirect to={defaultPath} />;
-              }}
+              collections={collections}
+              path="/collections/:name/search/"
+              render={({ match }) => <Redirect to={`/collections/${match.params.name}`} />}
             />
-            <Route
+            <Redirect
+              // This happens on Identity + Invite Only + External Provider email not matching
+              // the registered user
+              from="/error=access_denied&error_description=Signups+not+allowed+for+this+instance"
+              to={defaultPath}
+            />
+            {hasWorkflow ? <Route path="/workflow" component={Workflow} /> : null}
+            <RouteInCollection
+              exact
+              collections={collections}
+              path="/collections/:name"
+              render={props => <Collection {...props} />}
+            />
+            <RouteInCollection
               path="/collections/:name/new"
+              collections={collections}
               render={props => <Editor {...props} newRecord />}
             />
-            <Route path="/collections/:name/entries/*" component={Editor} />
+            <RouteInCollection
+              path="/collections/:name/entries/*"
+              collections={collections}
+              render={props => <Editor {...props} />}
+            />
+            <RouteInCollection
+              path="/collections/:name/search/:searchTerm"
+              collections={collections}
+              render={props => <Collection {...props} isSearchResults isSingleSearchResult />}
+            />
+            <RouteInCollection
+              collections={collections}
+              path="/collections/:name/filter/:filterTerm*"
+              render={props => <Collection {...props} />}
+            />
             <Route
               path="/search/:searchTerm"
               render={props => <Collection {...props} isSearchResults />}
             />
-            <Route
-              path="/edit/:collectionName/:entryName"
+            <RouteInCollection
+              path="/edit/:name/:entryName"
+              collections={collections}
               render={({ match }) => {
-                const { collectionName, entryName } = match.params;
-                return <Redirect to={`/collections/${collectionName}/entries/${entryName}`} />;
+                const { name, entryName } = match.params;
+                return <Redirect to={`/collections/${name}/entries/${entryName}`} />;
               }}
             />
             <Route component={NotFoundPage} />

@@ -1,13 +1,15 @@
-const Octokit = require('@octokit/rest');
+const { Octokit } = require('@octokit/rest');
 const fs = require('fs-extra');
 const path = require('path');
-const simpleGit = require('simple-git/promise');
+const {
+  getExpectationsFilename,
+  transformRecordedData: transformData,
+  getGitClient,
+} = require('./common');
 const { updateConfig } = require('../utils/config');
 const { escapeRegExp } = require('../utils/regexp');
+const { merge } = require('lodash');
 const { retrieveRecordedExpectations, resetMockServerState } = require('../utils/mock-server');
-
-const GIT_SSH_COMMAND = 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no';
-const GIT_SSL_NO_VERIFY = true;
 
 const GITHUB_REPO_OWNER_SANITIZED_VALUE = 'owner';
 const GITHUB_REPO_NAME_SANITIZED_VALUE = 'repo';
@@ -71,13 +73,13 @@ async function prepareTestGitHubRepo() {
 
   const tempDir = path.join('.temp', testRepoName);
   await fs.remove(tempDir);
-  let git = simpleGit().env({ ...process.env, GIT_SSH_COMMAND, GIT_SSL_NO_VERIFY });
+  let git = getGitClient();
 
   const repoUrl = `git@github.com:${owner}/${repo}.git`;
 
   console.log('Cloning repository', repoUrl);
   await git.clone(repoUrl, tempDir);
-  git = simpleGit(tempDir).env({ ...process.env, GIT_SSH_COMMAND, GIT_SSL_NO_VERIFY });
+  git = getGitClient(tempDir);
 
   console.log('Pushing to new repository', testRepoName);
 
@@ -137,8 +139,16 @@ async function deleteRepositories({ owner, repo, tempDir }) {
     .catch(errorHandler);
 }
 
+async function batchRequests(items, batchSize, func) {
+  while (items.length > 0) {
+    const batch = items.splice(0, batchSize);
+    await Promise.all(batch.map(func));
+    await new Promise(resolve => setTimeout(resolve, 2500));
+  }
+}
+
 async function resetOriginRepo({ owner, repo, tempDir }) {
-  console.log('Resetting origin repo:', `${owner}/repo`);
+  console.log('Resetting origin repo:', `${owner}/${repo}`);
   const { token } = getEnvs();
   const client = getGitHubClient(token);
 
@@ -149,34 +159,33 @@ async function resetOriginRepo({ owner, repo, tempDir }) {
   });
   const numbers = prs.map(pr => pr.number);
   console.log('Closing prs:', numbers);
-  await Promise.all(
-    numbers.map(pull_number =>
-      client.pulls.update({
-        owner,
-        repo,
-        pull_number,
-      }),
-    ),
-  );
+
+  await batchRequests(numbers, 10, async pull_number => {
+    await client.pulls.update({
+      owner,
+      repo,
+      pull_number,
+      state: 'closed',
+    });
+  });
 
   const { data: branches } = await client.repos.listBranches({ owner, repo });
   const refs = branches.filter(b => b.name !== 'master').map(b => `heads/${b.name}`);
 
   console.log('Deleting refs', refs);
-  await Promise.all(
-    refs.map(ref =>
-      client.git.deleteRef({
-        owner,
-        repo,
-        ref,
-      }),
-    ),
-  );
+
+  await batchRequests(refs, 10, async ref => {
+    await client.git.deleteRef({
+      owner,
+      repo,
+      ref,
+    });
+  });
 
   console.log('Resetting master');
-  const git = simpleGit(tempDir).env({ ...process.env, GIT_SSH_COMMAND, GIT_SSL_NO_VERIFY });
+  const git = getGitClient(tempDir);
   await git.push(['--force', 'origin', 'master']);
-  console.log('Done resetting origin repo:', `${owner}/repo`);
+  console.log('Done resetting origin repo:', `${owner}/${repo}`);
 }
 
 async function resetForkedRepo({ repo }) {
@@ -199,7 +208,7 @@ async function resetForkedRepo({ repo }) {
         }),
       ),
     );
-    console.log('Done resetting forked repo:', `${forkOwner}/repo`);
+    console.log('Done resetting forked repo:', `${forkOwner}/${repo}`);
   }
 }
 
@@ -217,15 +226,12 @@ async function setupGitHub(options) {
       prepareTestGitHubRepo(),
     ]);
 
-    const { use_graphql = false, open_authoring = false } = options;
-
     await updateConfig(config => {
-      config.backend = {
-        ...config.backend,
-        use_graphql,
-        open_authoring,
-        repo: `${repoData.owner}/${repoData.repo}`,
-      };
+      merge(config, options, {
+        backend: {
+          repo: `${repoData.owner}/${repoData.repo}`,
+        },
+      });
     });
 
     return { ...repoData, user, forkUser, mockResponses: false };
@@ -233,11 +239,11 @@ async function setupGitHub(options) {
     console.log('Running tests in "playback" mode - local data with be used');
 
     await updateConfig(config => {
-      config.backend = {
-        ...config.backend,
-        ...options,
-        repo: `${GITHUB_REPO_OWNER_SANITIZED_VALUE}/${GITHUB_REPO_NAME_SANITIZED_VALUE}`,
-      };
+      merge(config, options, {
+        backend: {
+          repo: `${GITHUB_REPO_OWNER_SANITIZED_VALUE}/${GITHUB_REPO_NAME_SANITIZED_VALUE}`,
+        },
+      });
     });
 
     return {
@@ -262,15 +268,6 @@ async function teardownGitHub(taskData) {
   return null;
 }
 
-const getExpectationsFilename = taskData => {
-  const { spec, testName } = taskData;
-  const basename = `${spec}__${testName}`;
-  const fixtures = path.join(__dirname, '..', 'fixtures');
-  const filename = path.join(fixtures, `${basename}.json`);
-
-  return filename;
-};
-
 async function setupGitHubTest(taskData) {
   if (process.env.RECORD_FIXTURES) {
     await resetRepositories(taskData);
@@ -290,7 +287,10 @@ const sanitizeString = (
     .replace(new RegExp(escapeRegExp(owner), 'g'), GITHUB_REPO_OWNER_SANITIZED_VALUE)
     .replace(new RegExp(escapeRegExp(repo), 'g'), GITHUB_REPO_NAME_SANITIZED_VALUE)
     .replace(new RegExp(escapeRegExp(token), 'g'), GITHUB_REPO_TOKEN_SANITIZED_VALUE)
-    .replace(new RegExp('https://avatars.+?/u/.+?v=\\d', 'g'), `${FAKE_OWNER_USER.avatar_url}`);
+    .replace(
+      new RegExp('https://avatars\\d+\\.githubusercontent\\.com/u/\\d+?\\?v=\\d', 'g'),
+      `${FAKE_OWNER_USER.avatar_url}`,
+    );
 
   if (ownerName) {
     replaced = replaced.replace(new RegExp(escapeRegExp(ownerName), 'g'), FAKE_OWNER_USER.name);
@@ -307,68 +307,86 @@ const sanitizeString = (
 };
 
 const transformRecordedData = (expectation, toSanitize) => {
-  const { httpRequest, httpResponse } = expectation;
+  const requestBodySanitizer = httpRequest => {
+    let body;
+    if (httpRequest.body && httpRequest.body.type === 'JSON' && httpRequest.body.json) {
+      const bodyObject =
+        typeof httpRequest.body.json === 'string'
+          ? JSON.parse(httpRequest.body.json)
+          : httpRequest.body.json;
 
-  const responseHeaders = {};
-
-  Object.keys(httpResponse.headers).forEach(key => {
-    responseHeaders[key] = httpResponse.headers[key][0];
-  });
-
-  let responseBody = null;
-  if (httpResponse.body && httpResponse.body.string) {
-    responseBody = httpResponse.body.string;
-  }
-
-  // replace recorded user with fake one
-  if (
-    responseBody &&
-    httpRequest.path === '/user' &&
-    httpRequest.headers.Host.includes('api.github.com')
-  ) {
-    const parsed = JSON.parse(responseBody);
-    if (parsed.login === toSanitize.forkOwner) {
-      responseBody = JSON.stringify(FAKE_FORK_OWNER_USER);
-    } else {
-      responseBody = JSON.stringify(FAKE_OWNER_USER);
-    }
-  }
-
-  let queryString;
-  if (httpRequest.queryStringParameters) {
-    const { queryStringParameters } = httpRequest;
-
-    queryString = Object.keys(queryStringParameters)
-      .map(key => `${key}=${queryStringParameters[key]}`)
-      .join('&');
-  }
-
-  let body;
-  if (httpRequest.body && httpRequest.body.string) {
-    const bodyObject = JSON.parse(httpRequest.body.string);
-    if (bodyObject.encoding === 'base64') {
-      // sanitize encoded data
-      const decodedBody = Buffer.from(bodyObject.content, 'base64').toString();
-      bodyObject.content = Buffer.from(sanitizeString(decodedBody, toSanitize)).toString('base64');
-      body = JSON.stringify(bodyObject);
-    } else {
+      if (bodyObject.encoding === 'base64') {
+        // sanitize encoded data
+        const decodedBody = Buffer.from(bodyObject.content, 'base64').toString('binary');
+        const sanitizedContent = sanitizeString(decodedBody, toSanitize);
+        const sanitizedEncodedContent = Buffer.from(sanitizedContent, 'binary').toString('base64');
+        bodyObject.content = sanitizedEncodedContent;
+        body = JSON.stringify(bodyObject);
+      } else {
+        body = JSON.stringify(bodyObject);
+      }
+    } else if (httpRequest.body && httpRequest.body.type === 'STRING' && httpRequest.body.string) {
       body = httpRequest.body.string;
+    } else if (httpRequest.body) {
+      const str =
+        typeof httpRequest.body !== 'string' ? JSON.stringify(httpRequest.body) : httpRequest.body;
+      body = sanitizeString(str, toSanitize);
     }
-  }
-
-  const cypressRouteOptions = {
-    body,
-    method: httpRequest.method,
-    url: queryString ? `${httpRequest.path}?${queryString}` : httpRequest.path,
-    headers: responseHeaders,
-    response: responseBody,
-    status: httpResponse.statusCode,
+    return body;
   };
+
+  const responseBodySanitizer = (httpRequest, httpResponse) => {
+    let responseBody = null;
+    if (httpResponse.body && httpResponse.body.string) {
+      responseBody = httpResponse.body.string;
+    } else if (
+      httpResponse.body &&
+      httpResponse.body.type === 'BINARY' &&
+      httpResponse.body.base64Bytes
+    ) {
+      responseBody = {
+        encoding: 'base64',
+        content: httpResponse.body.base64Bytes,
+      };
+    } else if (httpResponse.body && httpResponse.body.json) {
+      responseBody = JSON.stringify(httpResponse.body.json);
+    } else {
+      responseBody =
+        typeof httpResponse.body === 'string'
+          ? httpResponse.body
+          : httpResponse.body && JSON.stringify(httpResponse.body);
+    }
+
+    // replace recorded user with fake one
+    if (
+      responseBody &&
+      httpRequest.path === '/user' &&
+      httpRequest.headers.Host.includes('api.github.com')
+    ) {
+      const parsed = JSON.parse(responseBody);
+      if (parsed.login === toSanitize.forkOwner) {
+        responseBody = JSON.stringify(FAKE_FORK_OWNER_USER);
+      } else {
+        responseBody = JSON.stringify(FAKE_OWNER_USER);
+      }
+    }
+    return responseBody;
+  };
+
+  const cypressRouteOptions = transformData(
+    expectation,
+    requestBodySanitizer,
+    responseBodySanitizer,
+  );
 
   return cypressRouteOptions;
 };
 
-async function teardownGitHubTest(taskData) {
+const defaultOptions = {
+  transformRecordedData,
+};
+
+async function teardownGitHubTest(taskData, { transformRecordedData } = defaultOptions) {
   if (process.env.RECORD_FIXTURES) {
     await resetRepositories(taskData);
 
@@ -408,9 +426,69 @@ async function teardownGitHubTest(taskData) {
   return null;
 }
 
+async function seedGitHubRepo(taskData) {
+  if (process.env.RECORD_FIXTURES) {
+    const { owner, token } = getEnvs();
+
+    const client = getGitHubClient(token);
+    const repo = taskData.repo;
+
+    try {
+      console.log('Getting master branch');
+      const { data: master } = await client.repos.getBranch({
+        owner,
+        repo,
+        branch: 'master',
+      });
+
+      const prCount = 120;
+      const prs = new Array(prCount).fill(0).map((v, i) => i);
+      const batchSize = 5;
+      await batchRequests(prs, batchSize, async i => {
+        const branch = `seed_branch_${i}`;
+        console.log(`Creating branch ${branch}`);
+        await client.git.createRef({
+          owner,
+          repo,
+          ref: `refs/heads/${branch}`,
+          sha: master.commit.sha,
+        });
+
+        const path = `seed/file_${i}`;
+        console.log(`Creating file ${path}`);
+        await client.repos.createOrUpdateFile({
+          owner,
+          repo,
+          branch,
+          content: Buffer.from(`Seed File ${i}`).toString('base64'),
+          message: `Create seed file ${i}`,
+          path,
+        });
+
+        const title = `Non CMS Pull Request ${i}`;
+        console.log(`Creating PR ${title}`);
+        await client.pulls.create({
+          owner,
+          repo,
+          base: 'master',
+          head: branch,
+          title,
+        });
+      });
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
 module.exports = {
+  transformRecordedData,
   setupGitHub,
   teardownGitHub,
   setupGitHubTest,
   teardownGitHubTest,
+  seedGitHubRepo,
 };

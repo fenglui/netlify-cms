@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
 import { Icon, buttons, shadows, GoBackButton } from 'netlify-cms-ui-default';
 
@@ -38,14 +37,15 @@ export default class AuthenticationPage extends React.Component {
   static propTypes = {
     onLogin: PropTypes.func.isRequired,
     inProgress: PropTypes.bool,
-    config: ImmutablePropTypes.map.isRequired,
+    config: PropTypes.object.isRequired,
+    t: PropTypes.func.isRequired,
   };
 
   componentDidMount() {
     /**
      * Allow login screen to be skipped for demo purposes.
      */
-    const skipLogin = this.props.config.getIn(['backend', 'login']) === false;
+    const skipLogin = this.props.config.backend.login === false;
     if (skipLogin) {
       this.props.onLogin(this.state);
     }
@@ -57,15 +57,15 @@ export default class AuthenticationPage extends React.Component {
   };
 
   render() {
-    const { config, inProgress } = this.props;
+    const { config, inProgress, t } = this.props;
 
     return (
       <StyledAuthenticationPage>
         <PageLogoIcon size="300px" type="netlify-cms" />
         <LoginButton disabled={inProgress} onClick={this.handleLogin}>
-          {inProgress ? 'Logging in...' : 'Login'}
+          {inProgress ? t('auth.loggingIn') : t('auth.login')}
         </LoginButton>
-        {config.get('site_url') && <GoBackButton href={config.get('site_url')}></GoBackButton>}
+        {config.site_url && <GoBackButton href={config.site_url} t={t}></GoBackButton>}
       </StyledAuthenticationPage>
     );
   }

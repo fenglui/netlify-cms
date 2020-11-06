@@ -1,7 +1,6 @@
-/** @jsx jsx */
 import React from 'react';
 import PropTypes from 'prop-types';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/core';
 import reactDateTimeStyles from 'react-datetime/css/react-datetime.css';
 import DateTime from 'react-datetime';
 import moment from 'moment';
@@ -37,9 +36,9 @@ export default class DateControl extends React.Component {
 
     // dateFormat and timeFormat are strictly for modifying
     // input field with the date/time pickers
-    const dateFormat = field.get('dateFormat');
+    const dateFormat = field.get('date_format');
     // show time-picker? false hides it, true shows it using default format
-    let timeFormat = field.get('timeFormat');
+    let timeFormat = field.get('time_format');
     if (typeof timeFormat === 'undefined') {
       timeFormat = !!includeTime;
     }
@@ -51,7 +50,14 @@ export default class DateControl extends React.Component {
     };
   }
 
+  getDefaultValue() {
+    const { field } = this.props;
+    const defaultValue = field.get('default');
+    return defaultValue;
+  }
+
   formats = this.getFormats();
+  defaultValue = this.getDefaultValue();
 
   componentDidMount() {
     warnDeprecated();
@@ -61,9 +67,9 @@ export default class DateControl extends React.Component {
      * Set the current date as default value if no default value is provided. An
      * empty string means the value is intentionally blank.
      */
-    if (!value && value !== '') {
+    if (value === undefined) {
       setTimeout(() => {
-        this.handleChange(new Date());
+        this.handleChange(this.defaultValue === undefined ? new Date() : this.defaultValue);
       }, 0);
     }
   }

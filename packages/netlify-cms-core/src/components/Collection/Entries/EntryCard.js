@@ -1,17 +1,18 @@
 import React from 'react';
 import styled from '@emotion/styled';
+import { connect } from 'react-redux';
+import { boundGetAsset } from 'Actions/media';
 import { Link } from 'react-router-dom';
-import { resolvePath } from 'netlify-cms-lib-util';
-import { colors, colorsRaw, components, lengths } from 'netlify-cms-ui-default';
+import { colors, colorsRaw, components, lengths, zIndex } from 'netlify-cms-ui-default';
 import { VIEW_STYLE_LIST, VIEW_STYLE_GRID } from 'Constants/collectionViews';
-import { compileStringTemplate, parseDateFromEntry } from 'Lib/stringTemplate';
-import { selectIdentifier } from 'Reducers/collections';
+import { selectIsLoadingAsset } from 'Reducers/medias';
+import { selectEntryCollectionTitle } from 'Reducers/collections';
 
 const ListCard = styled.li`
   ${components.card};
   width: ${lengths.topCardWidth};
   margin-left: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   overflow: hidden;
 `;
 
@@ -66,7 +67,7 @@ const CardBody = styled.div`
     content: '';
     position: absolute;
     display: block;
-    z-index: 1;
+    z-index: ${zIndex.zIndex1};
     bottom: 0;
     left: -20%;
     height: 140%;
@@ -76,7 +77,7 @@ const CardBody = styled.div`
 `;
 
 const CardImage = styled.div`
-  background-image: url(${props => props.url});
+  background-image: url(${props => props.src});
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -84,36 +85,20 @@ const CardImage = styled.div`
 `;
 
 const EntryCard = ({
-  collection,
-  entry,
-  inferedFields,
-  publicFolder,
+  path,
+  summary,
+  image,
+  imageField,
   collectionLabel,
   viewStyle = VIEW_STYLE_LIST,
+  getAsset,
 }) => {
-  const label = entry.get('label');
-  const entryData = entry.get('data');
-  const defaultTitle = label || entryData.get(inferedFields.titleField);
-  const path = `/collections/${collection.get('name')}/entries/${entry.get('slug')}`;
-  const summary = collection.get('summary');
-  const date = parseDateFromEntry(entry, collection) || null;
-  const identifier = entryData.get(selectIdentifier(collection));
-  const title = summary
-    ? compileStringTemplate(summary, date, identifier, entryData)
-    : defaultTitle;
-
-  let image = entryData.get(inferedFields.imageField);
-  image = resolvePath(image, publicFolder);
-  if (image) {
-    image = encodeURI(image);
-  }
-
   if (viewStyle === VIEW_STYLE_LIST) {
     return (
       <ListCard>
         <ListCardLink to={path}>
           {collectionLabel ? <CollectionLabel>{collectionLabel}</CollectionLabel> : null}
-          <ListCardTitle>{title}</ListCardTitle>
+          <ListCardTitle>{summary}</ListCardTitle>
         </ListCardLink>
       </ListCard>
     );
@@ -125,13 +110,53 @@ const EntryCard = ({
         <GridCardLink to={path}>
           <CardBody hasImage={image}>
             {collectionLabel ? <CollectionLabel>{collectionLabel}</CollectionLabel> : null}
-            <CardHeading>{title}</CardHeading>
+            <CardHeading>{summary}</CardHeading>
           </CardBody>
-          {image ? <CardImage url={image} /> : null}
+          {image ? <CardImage src={getAsset(image, imageField).toString()} /> : null}
         </GridCardLink>
       </GridCard>
     );
   }
 };
 
-export default EntryCard;
+const mapStateToProps = (state, ownProps) => {
+  const { entry, inferedFields, collection } = ownProps;
+  const entryData = entry.get('data');
+  const summary = selectEntryCollectionTitle(collection, entry);
+
+  let image = entryData.get(inferedFields.imageField);
+  if (image) {
+    image = encodeURI(image);
+  }
+
+  const isLoadingAsset = selectIsLoadingAsset(state.medias);
+
+  return {
+    summary,
+    path: `/collections/${collection.get('name')}/entries/${entry.get('slug')}`,
+    image,
+    imageFolder: collection
+      .get('fields')
+      ?.find(f => f.get('name') === inferedFields.imageField && f.get('widget') === 'image'),
+    isLoadingAsset,
+  };
+};
+
+const mapDispatchToProps = dispatch => {
+  return {
+    boundGetAsset: (collection, entry) => boundGetAsset(dispatch, collection, entry),
+  };
+};
+
+const mergeProps = (stateProps, dispatchProps, ownProps) => {
+  return {
+    ...stateProps,
+    ...dispatchProps,
+    ...ownProps,
+    getAsset: dispatchProps.boundGetAsset(ownProps.collection, ownProps.entry),
+  };
+};
+
+const ConnectedEntryCard = connect(mapStateToProps, mapDispatchToProps, mergeProps)(EntryCard);
+
+export default ConnectedEntryCard;

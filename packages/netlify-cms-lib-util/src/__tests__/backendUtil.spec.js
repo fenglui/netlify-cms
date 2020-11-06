@@ -1,4 +1,4 @@
-import { parseLinkHeader, getAllResponses } from '../backendUtil';
+import { parseLinkHeader, getAllResponses, getPathDepth, filterByExtension } from '../backendUtil';
 import { oneLine } from 'common-tags';
 import nock from 'nock';
 
@@ -61,11 +61,33 @@ describe('getAllResponses', () => {
 
   it('should return all paged response', async () => {
     interceptCall({ repeat: 3, data: generatePulls(70) });
-    const res = await getAllResponses('https://api.github.com/pulls');
+    const res = await getAllResponses('https://api.github.com/pulls', {}, 'next', url => url);
     const pages = await Promise.all(res.map(res => res.json()));
 
     expect(pages[0]).toHaveLength(30);
     expect(pages[1]).toHaveLength(30);
     expect(pages[2]).toHaveLength(10);
+  });
+});
+
+describe('getPathDepth', () => {
+  it('should return 1 for empty string', () => {
+    expect(getPathDepth('')).toBe(1);
+  });
+
+  it('should return 2 for path of one nested folder', () => {
+    expect(getPathDepth('{{year}}/{{slug}}')).toBe(2);
+  });
+});
+
+describe('filterByExtension', () => {
+  it('should return true when extension matches', () => {
+    expect(filterByExtension({ path: 'file.html.md' }, '.html.md')).toBe(true);
+    expect(filterByExtension({ path: 'file.html.md' }, 'html.md')).toBe(true);
+  });
+
+  it("should return false when extension doesn't match", () => {
+    expect(filterByExtension({ path: 'file.json' }, '.html.md')).toBe(false);
+    expect(filterByExtension({ path: 'file.json' }, 'html.md')).toBe(false);
   });
 });
